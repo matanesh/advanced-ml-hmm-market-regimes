@@ -23,6 +23,7 @@ from src.evaluation import (
     average_duration,
     summarize_states,
 )
+from src.analysis import analyze_transitions, plot_transition_heatmap, plot_state_characteristics
 
 # Configuration class
 class ExperimentConfig:
@@ -227,6 +228,7 @@ def run_experiment(config: ExperimentConfig, save_dir: Optional[str] = None) -> 
     print("Training Gaussian HMM models for K =", config.k_values)
     hmm_models = {}
     hmm_state_tables = {}
+    hmm_analyses = {}  # For storing transition analysis
 
     for k in config.k_values:
         print(f"  Training HMM with K={k}...")
@@ -267,6 +269,9 @@ def run_experiment(config: ExperimentConfig, save_dir: Optional[str] = None) -> 
             "pred_return": pred_hmm
         }
         hmm_state_tables[k] = summarize_states(train_df, train_states)
+        # Perform transition analysis
+        state_names = [f"State {i}" for i in range(k)]
+        hmm_analyses[k] = analyze_transitions(model.transmat_, state_names)
 
     # 9. Compile results
     results_df = pd.DataFrame(results).sort_values("DPA_direction_accuracy", ascending=False).reset_index(drop=True)
@@ -284,7 +289,7 @@ def run_experiment(config: ExperimentConfig, save_dir: Optional[str] = None) -> 
         for k, state_table in hmm_state_tables.items():
             state_table.to_csv(os.path.join(save_dir, f"state_table_K{k}.csv"), index=False)
 
-        # Save transition matrices for each K
+        # Save transition matrices and analyses for each K
         for k, model_dict in hmm_models.items():
             model = model_dict["model"]
             transmat_df = pd.DataFrame(
@@ -293,6 +298,22 @@ def run_experiment(config: ExperimentConfig, save_dir: Optional[str] = None) -> 
                 columns=[f"to_state_{i}" for i in range(k)]
             )
             transmat_df.to_csv(os.path.join(save_dir, f"transition_matrix_K{k}.csv"))
+            
+            # Save transition analysis
+            analysis = hmm_analyses[k]
+            # Convert numpy arrays to lists for JSON serialization
+            analysis_serializable = {
+                "n_states": analysis["n_states"],
+                "state_names": analysis["state_names"],
+                "average_diagonal_probability": float(analysis["average_diagonal_probability"]),
+                "average_row_entropy": float(analysis["average_row_entropy"]),
+                "stationary_distribution": analysis["stationary_distribution"].tolist(),
+                "mean_recurrence_time": analysis["mean_recurrence_time"].tolist(),
+                "spectral_gap": float(analysis["spectral_gap"]),
+                "eigenvalues": analysis["eigenvalues"].tolist()
+            }
+            with open(os.path.join(save_dir, f"transition_analysis_K{k}.json"), 'w') as f:
+                json.dump(analysis_serializable, f, indent=2)
 
         # Generate and save plots for the best K (by DPA) or for K=3 as default
         best_k = None
@@ -339,30 +360,21 @@ def run_experiment(config: ExperimentConfig, save_dir: Optional[str] = None) -> 
         plt.close()
 
         # Transition matrix heatmap
-        plt.figure(figsize=(6, 5))
-        plt.imshow(model.transmat_, cmap="hot", interpolation="nearest")
-        plt.title(f"Transition matrix - Gaussian HMM K={best_k}")
-        plt.xlabel("To state")
-        plt.ylabel("From state")
-        plt.colorbar(label="Probability")
-        for i in range(best_k):
-            for j in range(best_k):
-                plt.text(j, i, f"{model.transmat_[i, j]:.2f}", ha="center", va="center", color="white")
-        plt.tight_layout()
-        plt.savefig(os.path.join(save_dir, f"{config.ticker}_transition_matrix_K{best_k}.png"), dpi=150, bbox_inches='tight')
-        plt.close()
+        state_names = [f"State {i}" for i in range(best_k)]
+        fig = plot_transition_heatmap(
+            model.transmat_,
+            state_names=state_names,
+            title=f"Transition matrix - Gaussian HMM K={best_k}",
+            save_path=os.path.join(save_dir, f"{config.ticker}_transition_matrix_K{best_k}.png")
+        )
+        plt.close(fig)
 
-        # Boxplot of log returns by state
-        state_groups = [plot_df.loc[plot_df[f"state_k{best_k}"] == s, "log_return"].values for s in range(best_k)]
-        plt.figure(figsize=(8, 5))
-        plt.boxplot(state_groups)
-        plt.xticks(range(1, best_k + 1), [f"State {s}" for s in range(best_k)])
-        plt.title(f"Distribution of daily log returns by hidden state (K={best_k})")
-        plt.ylabel("Log return")
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        plt.savefig(os.path.join(save_dir, f"{config.ticker}_state_boxplot_K{best_k}.png"), dpi=150, bbox_inches='tight')
-        plt.close()
+        # State characteristics plot
+        fig = plot_state_characteristics(
+            hmm_state_tables[best_k],
+            save_path=os.path.join(save_dir, f"{config.ticker}_state_characteristics_K{best_k}.png")
+        )
+        plt.close(fig)
 
     # 11. Print summary
     print("\n=== Experiment Results ===")
@@ -377,6 +389,7 @@ def run_experiment(config: ExperimentConfig, save_dir: Optional[str] = None) -> 
         "best_model": best_model,
         "hmm_models": hmm_models,
         "hmm_state_tables": hmm_state_tables,
+        "hmm_analyses": hmm_analyses,
         "train_df": train_df,
         "test_df": test_df,
         "total_runtime": total_runtime
