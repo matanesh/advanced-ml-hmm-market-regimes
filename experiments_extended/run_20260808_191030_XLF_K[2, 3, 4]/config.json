@@ -1,0 +1,23 @@
+{
+  "ticker": "XLF",
+  "start_date": "2004-01-01",
+  "end_date": null,
+  "test_size": 0.3,
+  "feature_cols": [
+    "log_return",
+    "rolling_volatility_20",
+    "daily_range",
+    "volume_change"
+  ],
+  "ma_window": 5,
+  "context_window": 100,
+  "k_values": [
+    2,
+    3,
+    4
+  ],
+  "covariance_type": "full",
+  "random_state": 42,
+  "n_iter": 300,
+  "tol": 0.0001
+}

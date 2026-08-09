@@ -301,16 +301,29 @@ def run_experiment(config: ExperimentConfig, save_dir: Optional[str] = None) -> 
             
             # Save transition analysis
             analysis = hmm_analyses[k]
-            # Convert numpy arrays to lists for JSON serialization
+            # Convert numpy arrays to lists for JSON serialization, handling complex numbers
+            def convert_to_serializable(obj):
+                if isinstance(obj, np.ndarray):
+                    if obj.dtype.kind == 'c':  # complex
+                        return [{"real": x.real, "imag": x.imag} for x in obj]
+                    else:
+                        return obj.tolist()
+                elif isinstance(obj, np.float32) or isinstance(obj, np.float64):
+                    return float(obj)
+                elif isinstance(obj, np.int32) or isinstance(obj, np.int64):
+                    return int(obj)
+                else:
+                    return obj
+
             analysis_serializable = {
                 "n_states": analysis["n_states"],
                 "state_names": analysis["state_names"],
                 "average_diagonal_probability": float(analysis["average_diagonal_probability"]),
                 "average_row_entropy": float(analysis["average_row_entropy"]),
-                "stationary_distribution": analysis["stationary_distribution"].tolist(),
-                "mean_recurrence_time": analysis["mean_recurrence_time"].tolist(),
+                "stationary_distribution": convert_to_serializable(analysis["stationary_distribution"]),
+                "mean_recurrence_time": convert_to_serializable(analysis["mean_recurrence_time"]),
                 "spectral_gap": float(analysis["spectral_gap"]),
-                "eigenvalues": analysis["eigenvalues"].tolist()
+                "eigenvalues": convert_to_serializable(analysis["eigenvalues"])
             }
             with open(os.path.join(save_dir, f"transition_analysis_K{k}.json"), 'w') as f:
                 json.dump(analysis_serializable, f, indent=2)

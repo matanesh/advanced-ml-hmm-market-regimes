@@ -1,0 +1,26 @@
+{
+  "n_states": 3,
+  "state_names": [
+    "State 0",
+    "State 1",
+    "State 2"
+  ],
+  "average_diagonal_probability": 0.9591582698094205,
+  "average_row_entropy": 0.18760816306171765,
+  "stationary_distribution": [
+    0.39831917983614606,
+    0.11621639941652669,
+    0.4854644207473273
+  ],
+  "mean_recurrence_time": [
+    2.5105494553673346,
+    8.60463759865713,
+    2.059883190740514
+  ],
+  "spectral_gap": 0.044789320148840184,
+  "eigenvalues": [
+    1.0,
+    0.9222641295771014,
+    0.9552106798511598
+  ]
+}
