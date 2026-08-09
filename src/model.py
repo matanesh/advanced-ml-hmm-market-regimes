@@ -2,11 +2,65 @@
 Model module for HMM market regimes project.
 """
 
+import math
 import time
+from typing import Optional, Tuple
+
 import numpy as np
 import pandas as pd
 from hmmlearn.hmm import GaussianHMM
-from typing import Tuple, Optional
+
+
+def gaussian_hmm_parameter_count(
+    n_states: int, n_features: int, covariance_type: str
+) -> int:
+    """Return the number of free parameters in a hmmlearn GaussianHMM."""
+    if n_states < 1 or n_features < 1:
+        raise ValueError("n_states and n_features must be positive")
+
+    covariance_parameters = {
+        "spherical": n_states,
+        "diag": n_states * n_features,
+        "full": n_states * n_features * (n_features + 1) // 2,
+        "tied": n_features * (n_features + 1) // 2,
+    }
+    if covariance_type not in covariance_parameters:
+        raise ValueError(f"unsupported covariance_type: {covariance_type}")
+
+    start_probabilities = n_states - 1
+    transition_probabilities = n_states * (n_states - 1)
+    means = n_states * n_features
+    return (
+        start_probabilities
+        + transition_probabilities
+        + means
+        + covariance_parameters[covariance_type]
+    )
+
+
+def gaussian_hmm_diagnostics(model: GaussianHMM, X_train: np.ndarray) -> dict:
+    """Calculate reusable convergence, likelihood and complexity diagnostics."""
+    observations = np.asarray(X_train)
+    if observations.ndim != 2 or len(observations) == 0:
+        raise ValueError("X_train must be a non-empty two-dimensional array")
+
+    log_likelihood = float(model.score(observations))
+    n_observations = len(observations)
+    n_parameters = gaussian_hmm_parameter_count(
+        model.n_components, model.n_features, model.covariance_type
+    )
+    monitor = model.monitor_
+    iterations = getattr(monitor, "iter", len(getattr(monitor, "history", ())))
+
+    return {
+        "converged": bool(monitor.converged),
+        "iterations": int(iterations),
+        "train_log_likelihood": log_likelihood,
+        "train_log_likelihood_per_observation": log_likelihood / n_observations,
+        "n_parameters": n_parameters,
+        "aic": 2 * n_parameters - 2 * log_likelihood,
+        "bic": n_parameters * math.log(n_observations) - 2 * log_likelihood,
+    }
 
 
 def train_gaussian_hmm(X_train_scaled: np.ndarray, 

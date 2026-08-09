@@ -3,12 +3,23 @@ Data loading and validation module for HMM market regimes project.
 """
 
 import warnings
+from dataclasses import dataclass
+from typing import Optional, Tuple
+
 warnings.filterwarnings("ignore")
 
-import yfinance as yf
-import pandas as pd
 import numpy as np
-from typing import Tuple, Optional
+import pandas as pd
+import yfinance as yf
+
+
+@dataclass(frozen=True)
+class TargetSafeSplits:
+    """Chronological partitions whose pre-segment boundary targets are removed."""
+
+    train: pd.DataFrame
+    validation: pd.DataFrame
+    test: pd.DataFrame
 
 
 def flatten_yfinance_columns(df: pd.DataFrame, ticker: str) -> pd.DataFrame:
@@ -111,6 +122,7 @@ def build_features(df: pd.DataFrame, price_col: str = "Adj Close") -> Tuple[pd.D
     df["rolling_volatility_20"] = df["log_return"].rolling(20).std()
     df["daily_range"] = (df["High"] - df["Low"]) / df["Close"]
     df["volume_change"] = np.log(df["Volume"] / df["Volume"].shift(1))
+    df["target_date"] = pd.Series(df.index, index=df.index).shift(-1)
     df["next_log_return"] = df["log_return"].shift(-1)
     df["next_close"] = df[price_col].shift(-1)
     df["current_close"] = df[price_col]
@@ -141,3 +153,60 @@ def chronological_split(df: pd.DataFrame, test_size: float = 0.30) -> Tuple[pd.D
     train_df = df.iloc[:split_idx].copy()
     test_df = df.iloc[split_idx:].copy()
     return train_df, test_df
+
+
+def target_safe_train_validation_test_split(
+    df: pd.DataFrame,
+    validation_size: float = 0.15,
+    test_size: float = 0.15,
+    target_date_col: str = "target_date",
+) -> TargetSafeSplits:
+    """Create monotonic Train/Validation/Test partitions without boundary-target leakage.
+
+    Targets are assumed to have been created before splitting.  The final row of
+    each pre-test partition is omitted because its next-observation target belongs
+    to the gap immediately before the following partition.
+    """
+    if not df.index.is_unique:
+        raise ValueError("time index must be unique")
+    if not df.index.is_monotonic_increasing:
+        raise ValueError("time index must be strictly increasing")
+    if target_date_col not in df.columns:
+        raise ValueError(f"missing target date column: {target_date_col}")
+    if not 0 < validation_size < 1 or not 0 < test_size < 1:
+        raise ValueError("validation_size and test_size must be between 0 and 1")
+    if validation_size + test_size >= 1:
+        raise ValueError("validation_size + test_size must be less than 1")
+
+    train_end = int(len(df) * (1 - validation_size - test_size))
+    validation_end = int(len(df) * (1 - test_size))
+    if train_end < 2 or validation_end - train_end < 2 or len(df) - validation_end < 1:
+        raise ValueError("split sizes leave an empty target-safe partition")
+
+    train = df.iloc[: train_end - 1].copy()
+    validation = df.iloc[train_end : validation_end - 1].copy()
+    test = df.iloc[validation_end:].copy()
+
+    partitions = (train, validation, test)
+    if any(part.empty for part in partitions):
+        raise ValueError("split sizes leave an empty target-safe partition")
+    if any(
+        not part.index.is_unique or not part.index.is_monotonic_increasing
+        for part in partitions
+    ):
+        raise ValueError("partitions must have strictly increasing, unique indexes")
+    if not train.index.max() < validation.index.min() < test.index.min():
+        raise ValueError("partitions must be chronological and non-overlapping")
+
+    target_dates = [part[target_date_col] for part in partitions]
+    if any(dates.isna().any() for dates in target_dates):
+        raise ValueError("target dates must be present for every retained row")
+    target_pairs = zip(target_dates, partitions)
+    if any((dates <= part.index.to_series()).any() for dates, part in target_pairs):
+        raise ValueError("each target date must be later than its feature date")
+    if train[target_date_col].max() >= validation.index.min():
+        raise ValueError("training targets must precede validation observations")
+    if validation[target_date_col].max() >= test.index.min():
+        raise ValueError("validation targets must precede test observations")
+
+    return TargetSafeSplits(train=train, validation=validation, test=test)
