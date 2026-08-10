@@ -1,4 +1,8 @@
-# Final Report: Gaussian HMM for Market Regime Detection and Short-Term Prediction
+# ARCHIVED EXPLORATORY REPORT — NOT FOR SUBMISSION
+
+> This historical draft contains claims that were invalidated by the scientific audit (including universe size, test-based selection and unsupported significance). It is preserved only for provenance. The authoritative submission is `reports/report.pdf`; verified evidence is in `experiments_canonical/canonical_20260810_014841/` and `analysis/canonical_findings.md`.
+
+# Historical Draft: Gaussian HMM for Market Regime Detection and Short-Term Prediction
 
 ## Abstract
 This project investigates the ability of Gaussian Hidden Markov Models (HMM) to identify latent market regimes and predict short-term direction of daily returns for various financial assets. We test the hypothesis that HMM provides a statistically significant improvement over simple baselines (naive train mean return, persistence, moving average, observable Markov chain) in directional prediction accuracy (DPA). We analyze multiple assets across different classes (equities, ETFs, commodities, bonds, crypto) over an extended historical period (2004-01-01 to present).

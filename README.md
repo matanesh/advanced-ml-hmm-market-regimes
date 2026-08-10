@@ -1,125 +1,110 @@
-# Advanced ML HMM Market Regimes Project
+# Gaussian HMM Market-Regime Analysis
 
-This project implements Gaussian Hidden Markov Models (HMM) for detecting hidden market regimes and predicting next-day direction in financial time series. The work was conducted as part of the "Advanced Methods in Machine Learning" course final project.
+Final project for **Advanced Methods in Machine Learning**, Afeka Academic College of Engineering.
 
-## Project Structure
+This repository evaluates whether a multivariate Gaussian Hidden Markov Model can identify interpretable market regimes and improve next-day return-direction prediction relative to transparent baselines. The submission emphasizes chronological evaluation, leakage prevention, validation-only model selection, reproducibility, and cautious reporting.
 
-```
-advanced-ml-hmm-market-regimes/
-├── src/
-│   ├── __init__.py
-│   ├── data.py          # Data loading, validation, and feature engineering
-│   ├── model.py         # HMM training and inference functions
-│   └── evaluation.py    # Evaluation metrics and state summarization
-├── experiments_multi_asset/   # Directory where experiment results are saved
-├── run_experiment.py    # Script to run a single asset experiment
-├── run_multi_asset_experiments.py  # Script to run experiments for multiple assets
-├── run_remaining_experiments.py    # Script to run experiments for remaining assets
-├── test_setup.py        # Script to test the project setup
-├── hmm_run_original.py  # Original script (for reference)
-�└── README.md
-```
+## Submission files
 
-## Features
+| Deliverable | Path |
+|---|---|
+| Compiled paper (Hebrew, PDF) | `reports/report.pdf` |
+| Editable LaTeX source | `reports/report.tex` |
+| Bibliography | `reports/references.bib` |
+| Executed notebook | `HMM_Market_Regimes_Project.ipynb` |
+| Canonical runner | `run_canonical.py` |
+| Canonical run | `experiments_canonical/canonical_20260810_014841/` |
+| Independent artifact audit | `analysis/canonical_findings.md` |
+| Scientific audit of historical work | `AUDIT.md` |
+| Changes made for submission | `CHANGES.md` |
 
-- **Data Source**: Uses yfinance to download historical price data.
-- **Features**: Log returns, rolling volatility, daily range, volume change.
-- **Model**: Gaussian HMM (via hmmlearn) with Baum-Welch training.
-- **Evaluation**: 
-  - Directional Prediction Accuracy (DPA)
-  - Mean Absolute Error (MAE)
-  - Root Mean Squared Error (RMSE)
-  - Mean Absolute Percentage Error (MAPE)
-  - Log-Likelihood
-  - Runtime
-- **Baselines**: 
-  - Naive (train mean return)
-  - Naive (persistence)
-  - Moving Average
-  - Discrete Markov Chain
-- **Regime Interpretation**: After training, hidden states are analyzed for mean return, volatility, and duration.
-- **Reproducibility**: Fixed random seed, chronological train/test split, no future information leakage.
+> Before final submission, fill in the student name/ID, program, lecturer, and submission date placeholders on the PDF title page and rebuild it.
 
-## Requirements
+## Canonical experiment
 
-- Python 3.11+
-- Required packages: yfinance, hmmlearn, scikit-learn, pandas, numpy, matplotlib
+The fixed universe is `SPY`, `GLD`, `TLT`, `BTC-USD`, and `DIS`, requested over 2014-01-01 through 2024-12-31. Four features are used: log return, 20-day rolling volatility, daily range, and log volume change.
 
-Install with:
-```bash
-pip install yfinance hmmlearn scikit-learn pandas numpy matplotlib
-```
+The protocol uses:
 
-## Usage
+- chronological Train/Validation/Test partitions (approximately 70%/15%/15%);
+- target-safe boundary removal so a next-day target never crosses partitions;
+- a scaler fitted on Train only;
+- `K ∈ {2,3,4}` and seeds `{42,123,456}`;
+- validation log-likelihood for locking K and seed;
+- one final evaluation on the held-out Test partition;
+- four baselines evaluated on the identical Test observations;
+- convergence, iterations, parameter count, AIC, BIC, likelihood and forecast-error diagnostics.
 
-### Single Asset Experiment
+This is a **single held-out split per asset**, not rolling-origin evaluation.
 
-To run an experiment for a single asset (e.g., SPY) and save results:
+## Main result
+
+The selected HMM achieved mean DPA of **52.81%** across the five assets. It did not outperform the strongest pre-specified baseline on any asset (three ties and two losses). The states remain descriptively useful for identifying differences in volatility, occupancy and persistence, but this run does **not** establish forecasting superiority, statistical significance, or trading profitability.
+
+## Environment setup
+
+Recommended: Python 3.11+ in a clean virtual environment.
 
 ```bash
-python run_experiment.py
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-This will create a directory `experiments/spy_default/` with results.
-
-### Multiple Assets Experiment
-
-To run experiments for a predefined set of assets (as per the project requirements):
+## Review the executed notebook
 
 ```bash
-python run_multi_asset_experiments.py
+jupyter lab HMM_Market_Regimes_Project.ipynb
 ```
 
-This will run experiments for:
-- Broad indices/ETFs: SPY, QQQ, IWM
-- Large-cap equities: AAPL, MSFT, NVDA, JPM, AMZN
-- Sector/defensive/alternative: XLE, GLD, TLT, EFA
-- Crypto: BTC-USD, ETH-USD
-- Optional: DIA
+The committed notebook loads the canonical artifacts by default and runs without downloading data or retraining. The expensive path is explicitly gated by `RUN_FULL_EXPERIMENTS = False`.
 
-Results are saved in `experiments_multi_asset/` with subdirectories for each asset.
-
-### Remaining Assets
-
-If you need to run additional assets (e.g., after adding more tickers), use:
+Clean execution check:
 
 ```bash
-python run_remaining_experiments.py
+jupyter nbconvert --to notebook --execute \
+  HMM_Market_Regimes_Project.ipynb \
+  --output /tmp/HMM_verified.ipynb \
+  --ExecutePreprocessor.timeout=600 \
+  --ExecutePreprocessor.kernel_name=python3
 ```
 
-## Experiment Output
+## Re-run the canonical experiment
 
-For each experiment, the following are saved:
-- `config.json`: The configuration used
-- `results.csv`: Evaluation metrics for all models (baselines and HMMs)
-- `state_table_K{K}.csv`: Summary of hidden states (for each K)
-- `transition_matrix_K{K}.csv`: Transition matrix (for each K)
-- Plots:
-  - `{ticker}_price_over_time.png`
-  - `{ticker}_log_returns.png`
-  - `{ticker}_rolling_volatility.png`
-  - `{ticker}_price_states_K{K}.png`
-  - `{ticker}_returns_states_K{K}.png`
-  - `{ticker}_transition_matrix_K{K}.png`
-  - `{ticker}_state_boxplot_K{K}.png`
+```bash
+python run_canonical.py
+```
 
-## Key Findings
+A new timestamped directory is created under `experiments_canonical/`. Market data are downloaded through `yfinance`; because upstream historical data can be revised, a new run may not be bit-for-bit identical to the committed canonical artifact.
 
-From the experiments conducted:
-- For most traditional assets (SPY, QQQ, IWM, AAPL, MSFT, NVDA, JPM, XLE, GLD, TLT, EFA, DIA), the naive baseline (train mean return) achieved the highest DPA.
-- For cryptocurrencies (BTC-USD, ETH-USD) and AMZN, Gaussian HMM achieved the highest DPA:
-  - BTC-USD: Gaussian HMM K=2 (DPA: 0.5104)
-  - ETH-USD: Gaussian HMM K=4 (DPA: 0.5378)
-  - AMZN: Gaussian HMM K=4 (DPA: 0.5376)
+## Tests
 
-This suggests that Gaussian HMM may be particularly useful for detecting regimes in more volatile or cryptocurrency markets.
+```bash
+python -m pytest tests/ -q
+python test_setup.py
+python -m py_compile run_canonical.py src/*.py tests/*.py
+```
 
-## Notes
+## Build the paper
 
-- The project does not claim profitable trading strategies; it focuses on regime detection and forecasting comparison.
-- All experiments use a chronological train/test split (approximately 70% train, 30% test) with data from 2014-01-01 to present.
-- Hidden states are interpreted only after training, using the training data to compute state-dependent statistics.
+XeLaTeX and BibTeX are required.
 
-## License
+```bash
+cd reports
+xelatex -interaction=nonstopmode -halt-on-error report.tex
+bibtex report
+xelatex -interaction=nonstopmode -halt-on-error report.tex
+xelatex -interaction=nonstopmode -halt-on-error report.tex
+```
 
-This project is for educational purposes as part of a university course.
+## Repository status and provenance
+
+- `experiments_canonical/canonical_20260810_014841/` is the sole source for numerical claims in the paper and notebook.
+- Earlier exploratory directories are retained for historical context only and must not be mixed with canonical conclusions.
+- `AUDIT.md` documents why older headline claims were retired.
+- `analysis/canonical_findings.md` documents the machine-readable cross-check and known schema/provenance limitations.
+
+## Scope
+
+Educational and academic use. The project does not provide investment advice or claim a profitable trading strategy.

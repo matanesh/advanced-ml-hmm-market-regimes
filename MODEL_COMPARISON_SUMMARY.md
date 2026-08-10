@@ -1,4 +1,8 @@
-## Summary of Model Comparison (Quick Test: 2020-01-01 to present)
+# ARCHIVED QUICK COMPARISON — EXPLORATORY ONLY
+
+> This quick test did not use the final canonical protocol and is not evidence for the submission conclusions. It is preserved for provenance. Use `reports/report.pdf` and `experiments_canonical/canonical_20260810_014841/` as the authoritative sources.
+
+## Historical Summary of Model Comparison (Quick Test: 2020-01-01 to present)
 
 We compared the following models on five assets (SPY, NVDA, DIS, ADBE, QQQ):
 - Gaussian HMM with K = 2,3,4 and covariance types 'full' and 'diag'

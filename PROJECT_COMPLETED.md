@@ -1,4 +1,8 @@
-The HMM market regimes project has been successfully set up and initial experiments have been run.
+# ARCHIVED INITIAL CHECKPOINT — NOT CURRENT SUBMISSION STATUS
+
+> This file predates the leakage and artifact audit. It is retained only as historical context and must not be used to support current conclusions. See `README.md`, `AUDIT.md`, `reports/report.pdf`, and the canonical run `experiments_canonical/canonical_20260810_014841/`.
+
+The HMM market regimes project was initially set up and exploratory experiments were run.
 
 Project location: /root/projects/advanced-ml-hmm-market-regimes
 

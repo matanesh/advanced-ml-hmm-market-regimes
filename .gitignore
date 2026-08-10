@@ -157,3 +157,13 @@ experiments/
 # OS
 .DS_Store
 Thumbs.db
+
+# LaTeX auxiliary files (the compiled submission PDF is tracked)
+*.aux
+*.bbl
+*.blg
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
