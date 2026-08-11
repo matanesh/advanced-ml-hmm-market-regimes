@@ -1,0 +1,48 @@
+\section{ניסויים, Baselines ומדדי הערכה}
+
+\subsection{Baselines פשוטים}
+
+ה־HMM הושווה תחילה לארבעה כללים פשוטים, כדי לוודא שכל יתרון אינו נובע רק ממגמת שוק בסיסית:
+
+\begin{itemize}
+    \item \textbf{Naive - train mean:} מנבא לפי סימן ממוצע התשואה ב־Train.
+    \item \textbf{Naive persistence:} מנבא שהכיוון הבא יהיה זהה לכיוון האחרון.
+    \item \textbf{Moving Average 5:} כלל המבוסס על ממוצע נע קצר.
+    \item \textbf{Discrete Markov Chain:} מודל מעבר נצפה בין Up/Down ללא Hidden States.
+\end{itemize}
+
+\subsection{Supervised ML Baselines}
+
+כדי לבדוק אם הקושי החיזויי נובע מבחירת HMM דווקא, נוספו שלושה classifiers המקבלים בדיוק את אותו Feature Vector ואותו split:
+
+\begin{itemize}
+    \item \tech{Logistic Regression} עם \(C=1\) ו־scaling על Train בלבד.
+    \item \tech{Random Forest Classifier} עם 500 עצים, depth מרבי 6 ו־minimum leaf size של 10.
+    \item \tech{HistGradientBoostingClassifier} עם 200 iterations, learning rate 0.05 ו־15 leaves לכל היותר.
+\end{itemize}
+
+ה־hyperparameters נקבעו מראש, ללא search על Test. מטרת ההשוואה אינה להציג state-of-the-art supervised forecasting, אלא לבדוק האם מודלים ליניאריים ולא־ליניאריים פשוטים מצליחים לחלץ מה־Features signal שחסר ל־HMM.
+
+\subsection{מדדים}
+
+המדד המרכזי לחיזוי כיוון הוא \tech{Directional Prediction Accuracy (DPA)}:
+
+\begin{equation}
+\mathrm{DPA}=\frac{1}{N}\sum_{t=1}^{N}\mathbb{1}\left[\operatorname{sign}(\hat r_{t+1})=\operatorname{sign}(r_{t+1})\right].
+\end{equation}
+
+לצד DPA נמדדו MAE, RMSE ו־MAPE לצורך magnitude error \cite{hyndman2006another}. עבור מודלי classification נמדדו גם Balanced Accuracy, ROC-AUC, Log Loss ו־Brier Score. המדדים האחרונים חשובים משום ש־Accuracy רגיל עלול להיראות גבוה כאשר שיעור הימים החיוביים גבוה יחסית.
+
+ל־HMM נשמרו בנוסף log-likelihood, AIC/BIC, convergence, occupancy, Transition Matrix, dwell time ו־posterior confidence. מדדים אלה אינם מדדי forecasting; הם מתארים התאמה פנימית ומבנה של המודל.
+
+\subsection{ניסויי Robustness}
+
+מעבר ל־held-out split נוספו שלושה סוגי בדיקות:
+
+\begin{enumerate}
+    \item \textbf{Seed stability:} התאמת כל \(K\) בחמישה seeds והשוואת חלוקת הימים באמצעות \tech{Adjusted Rand Index (ARI)}.
+    \item \textbf{Walk-forward על SPY:} שלושה expanding windows, כאשר בכל fold נבנים Train, Validation ו־Test חדשים באופן כרונולוגי.
+    \item \textbf{External / cross-asset validation:} השוואת states של SPY ל־VIX, שלא שימש באימון, ובחינת התנהגות נכסים אחרים כתלות ב־SPY state.
+\end{enumerate}
+
+בדיקות אלה אינן נועדו לשפר את Test בדיעבד, אלא לבדוק אם המסקנות התיאוריות נשארות סבירות גם מעבר לריצה יחידה.
