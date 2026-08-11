@@ -4,6 +4,26 @@
 
 בריצה המורחבת נבחר \(K=4\) עבור שמונה מתוך תשעת הנכסים; עבור \asset{TLT} נבחר \(K=3\). הבחירה נעשתה לפי Validation log-likelihood בלבד. העובדה ש־\(K=4\) נבחר ברוב הנכסים אינה כשלעצמה הוכחה שזהו מספר states ``אמיתי''; לכן נבדקה גם יציבות בין seeds.
 
+ב־\asset{SPY}, השוואת המועמדים מראה מדוע \(K=4\) נבחר. הטבלה משתמשת ב־seed בעל Validation log-likelihood הטוב ביותר לכל \(K\), לפני ה־refit הסופי על Train+Validation:
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{c r r r r}
+\toprule
+\(K\) & Seed & Val. LL / obs. & BIC (Train) & Min occupancy (\%) \\
+\midrule
+2 & 789 & -5.206 & 14935.6 & 30.19 \\
+3 & 123 & -4.759 & 13415.1 & 4.16 \\
+4 & 456 & -4.626 & 12148.8 & 4.06 \\
+\bottomrule
+\end{tabular}
+\caption{השוואת \(K=2,3,4\) עבור SPY בשלב בחירת המודל. Validation log-likelihood גבוה יותר (פחות שלילי) עדיף; BIC נמוך יותר עדיף.}
+\label{tab:spykcomparison}
+\end{table}
+
+גם Validation likelihood וגם BIC מעדיפים כאן את \(K=4\), אך ה־occupancy המינימלי יורד לכ־\pct{4}. לכן לא הסתפקנו בקריטריון התאמה בלבד ובדקנו גם יציבות בין seeds ומשמעות סטטיסטית post-hoc של ה־states. לאחר בחירת \(K=4\) ו־seed 456, המודל הסופי הותאם מחדש על Train+Validation; ב־SPY ה־refit התכנס ב־125 iterations וזמן ההתאמה היה כ־0.79 שניות בסביבת הריצה המאומתת.
+
 עבור \asset{SPY}, ה־ARI הממוצע בין חמשת ה־seeds ב־\(K=4\) היה 0.995, עם מינימום של 0.992. גם \asset{QQQ} ו־\asset{NVDA} היו יציבים מאוד, עם ARI של כ־0.960 ו־0.984 בהתאמה. לעומת זאת, \asset{BTC-USD} ו־\asset{GLD} היו פחות יציבים ב־\(K=4\), עם ARI של כ־0.553 ו־0.681. לכן המסקנה אינה שכל נכס ``בנוי מארבעה משטרים'', אלא שהמודל העשיר יציב במיוחד בחלק מהנכסים ופחות באחרים.
 
 \begin{figure}[H]
