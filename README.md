@@ -2,99 +2,112 @@
 
 Final project for **Advanced Methods in Machine Learning**, Afeka Academic College of Engineering.
 
-This repository evaluates two related questions: whether a multivariate Gaussian Hidden Markov Model improves next-day return-direction prediction relative to transparent baselines, and whether it identifies statistically meaningful latent market regimes even when short-horizon prediction is weak. The submission emphasizes chronological evaluation, leakage prevention, validation-only model selection, reproducibility, posterior uncertainty and cautious reporting.
+The project separates two questions that are often conflated in financial ML:
 
-## Submission files
+1. Can a Gaussian Hidden Markov Model improve **next-day directional prediction**?
+2. Can it identify **stable, interpretable latent market regimes** even when short-horizon prediction is weak?
+
+The final evidence supports the second use more strongly than the first. The HMM is therefore interpreted primarily as a **latent market-state estimator**, not as a guaranteed trading predictor.
+
+## Final submission files
 
 | Deliverable | Path |
 |---|---|
-| Compiled paper (Hebrew, PDF) | `reports/report.pdf` |
-| Editable LaTeX source | `reports/report.tex` |
+| Compiled Hebrew report | `reports/report.pdf` |
+| XeLaTeX source | `reports/report.tex` + `reports/sections/` |
 | Bibliography | `reports/references.bib` |
 | Executed notebook | `HMM_Market_Regimes_Project.ipynb` |
-| Canonical runner | `run_canonical.py` |
-| Canonical run | `experiments_canonical/canonical_20260810_014841/` |
-| Extended robustness runner | `run_extended_analysis.py` |
-| Extension design | `RESEARCH_EXTENSION_PLAN.md` |
-| Independent artifact audit | `analysis/canonical_findings.md` |
-| Scientific audit of historical work | `AUDIT.md` |
-| Changes made for submission | `CHANGES.md` |
+| Notebook builder | `build_final_notebook.py` |
+| Extended HMM runner | `run_extended_analysis.py` |
+| External-context analysis | `analyze_extended_context.py` |
+| Supervised ML baselines | `run_supervised_baselines.py` |
+| Final HMM artifacts | `experiments_extended/extended_20260811_121957/` |
+| Final supervised artifacts | `experiments_supervised/supervised_20260811_133344/` |
+| Historical frozen canonical run | `experiments_canonical/canonical_20260810_014841/` |
+| Change log | `CHANGES.md` |
+| Final build handoff | `FINAL_SUBMISSION_EXECUTION.md` |
 
-> The original canonical artifact is intentionally preserved. New robustness outputs are written under `experiments_extended/` and must not silently replace the canonical numerical claims until they have been inspected and incorporated into the notebook/report.
+## Data and protocol
 
-## Canonical experiment
+The final panel is economically diverse rather than a large redundant list of stocks:
 
-The frozen canonical universe is `SPY`, `GLD`, `TLT`, `BTC-USD`, and `DIS`, requested over 2014-01-01 through 2024-12-31. Four features are used: log return, 20-day rolling volatility, daily range, and log volume change.
+`SPY`, `QQQ`, `IWM`, `TLT`, `GLD`, `HYG`, `BTC-USD`, `JPM`, `NVDA`.
 
-The protocol uses:
+Requested date range: `2014-01-01` through `2024-12-31`.
 
-- chronological Train/Validation/Test partitions (approximately 70%/15%/15%);
+Features:
+
+- log return;
+- 20-day rolling volatility;
+- daily range;
+- log volume change.
+
+Protocol:
+
+- chronological Train / Validation / Test split, approximately 70% / 15% / 15%;
 - target-safe boundary removal so a next-day target never crosses partitions;
-- a scaler fitted on Train only;
-- `K ∈ {2,3,4}` and seeds `{42,123,456}`;
-- validation log-likelihood for locking K and seed;
-- one final evaluation on the held-out Test partition;
-- four baselines evaluated on the identical Test observations;
-- convergence, iterations, parameter count, AIC, BIC, likelihood and forecast-error diagnostics.
+- no random time-series shuffle;
+- preprocessing fit on Train only;
+- HMM `K ∈ {2,3,4}`;
+- HMM seeds `{42,123,456,789,2026}`;
+- model selection using Validation log-likelihood only;
+- Test kept outside model selection.
 
-This is a **single held-out split per asset**, not rolling-origin evaluation.
+## Final HMM analyses
 
-## Frozen canonical result
+The extended experiment adds:
 
-The selected HMM achieved mean DPA of **52.81%** across the five canonical assets. It did not outperform the strongest pre-specified baseline on any asset (three ties and two losses). The states remained descriptively useful for identifying differences in volatility, occupancy and persistence, but this run does **not** establish forecasting superiority, statistical significance, or trading profitability.
+- hard-state and soft-posterior forecasts;
+- posterior confidence and normalized entropy;
+- seed stability using label-invariant Adjusted Rand Index;
+- three expanding walk-forward folds on SPY;
+- state-conditioned prediction errors;
+- SPY-conditioned cross-asset behavior;
+- external post-hoc validation against VIX, which is **not** a training feature;
+- empirical state duration versus the first-order HMM geometric-duration implication.
 
-This negative predictive result motivates the extension below rather than being hidden or replaced.
+## Supervised ML baselines
 
-## Extended regime / robustness analysis
+The exact same feature set and chronological partitions are used for:
 
-`run_extended_analysis.py` asks whether the HMM is more informative as a **latent market-state estimator** than as a point-forecasting model.
+- Logistic Regression;
+- Random Forest Classifier;
+- HistGradientBoostingClassifier.
 
-The economically diverse panel is:
+These baselines use pre-specified hyperparameters and are not tuned on Test. In addition to directional accuracy, their evaluation includes balanced accuracy, ROC-AUC, log loss and Brier score.
 
-- `SPY` — broad U.S. equities and the reference regime series;
-- `QQQ` — growth / technology-heavy equities;
-- `IWM` — U.S. small caps;
-- `TLT` — long-duration U.S. Treasuries;
-- `GLD` — gold;
-- `HYG` — high-yield corporate credit;
-- `BTC-USD` — crypto / high-volatility alternative asset;
-- `JPM` — large financial equity;
-- `NVDA` — high-beta growth equity.
+## Main empirical result
 
-The extension adds four controlled analyses:
+Mean directional prediction accuracy across the nine assets is approximately:
 
-1. **Seed stability.** K=2/3/4 are repeated across five random initializations. Label-invariant Adjusted Rand Index quantifies whether different fits partition the same dates similarly.
-2. **Posterior uncertainty.** Past-only posterior state probabilities are converted to normalized entropy and confidence. The analysis checks whether uncertainty is elevated around inferred state transitions and turbulent observations.
-3. **Expanding-window robustness.** SPY is evaluated over three chronological walk-forward folds, with model selection repeated independently inside each fold.
-4. **Cross-asset regime behavior.** Other assets are summarized conditional on SPY's held-out inferred state, including mean return, volatility, downside frequency, correlation and beta to SPY.
+| Model | Mean DPA |
+|---|---:|
+| Naive - train mean | 54.54% |
+| Logistic Regression | 54.14% |
+| Random Forest | 53.27% |
+| Gaussian HMM - soft posterior | 53.06% |
+| HistGradientBoosting | 52.49% |
+| Gaussian HMM - hard state | 52.06% |
 
-The extension also compares the original hard-state HMM forecast with a **soft-posterior forecast**. The soft version propagates the full current posterior through the transition matrix before taking the expected state-conditional return. It therefore uses HMM uncertainty instead of discarding it through a single hard state assignment.
+No model demonstrates a stable universal forecasting advantage.
 
-### Smoke test
+The stronger HMM findings concern regime structure. For SPY, the selected `K=4` model produces states with materially different return, volatility, daily range, drawdown and dwell-time characteristics. Its state partition is highly stable across seeds (mean pairwise ARI ≈ 0.995). Posterior entropy rises sharply around state switches, VIX separates several inferred states despite not being a feature, and cross-asset correlations change with the SPY hidden state.
 
-The smoke test uses two seeds and skips walk-forward analysis:
+Therefore the final conclusion is deliberately cautious:
 
-```bash
-python run_extended_analysis.py --quick
-```
+> In this project the Gaussian HMM is more informative as a model of conditional market structure than as a point-forecasting model for the next day.
 
-### Full extension
+No profitability or investment-advice claim is made.
 
-```bash
-python run_extended_analysis.py
-```
+## Reinforcement Learning future work
 
-Market data are cached in `data_cache/` after a successful download so repeated experiments do not depend unnecessarily on Yahoo Finance availability. To deliberately refresh the cache:
+The report contains a dedicated future-work section on **regime-aware Reinforcement Learning**. The proposed experiment would compare an RL policy using raw market features against policies that additionally receive HMM posterior probabilities and posterior entropy. Transaction costs, turnover, multiple seeds and walk-forward evaluation would be mandatory.
 
-```bash
-python run_extended_analysis.py --force-download
-```
+No RL result is claimed in the current project because no RL experiment was run.
 
-Every full run creates a timestamped directory under `experiments_extended/` containing candidate diagnostics, seed-stability tables, selected-model state summaries, posterior time series, regime-conditioned prediction metrics, cross-asset analysis, walk-forward results and a provenance manifest.
+## Environment
 
-## Environment setup
-
-Recommended: Python 3.11+ in a clean virtual environment.
+Recommended: Python 3.11+.
 
 ```bash
 python3 -m venv .venv
@@ -103,17 +116,12 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-## Review the executed notebook
+## Build the final notebook
+
+The notebook is deterministically generated from the verified artifacts:
 
 ```bash
-jupyter lab HMM_Market_Regimes_Project.ipynb
-```
-
-The committed notebook currently loads the frozen canonical artifacts by default and does not download data or retrain models. The new extended artifacts should be incorporated only after a verified full extension run is available.
-
-Clean execution check:
-
-```bash
+python build_final_notebook.py
 jupyter nbconvert --to notebook --execute \
   HMM_Market_Regimes_Project.ipynb \
   --output /tmp/HMM_verified.ipynb \
@@ -121,35 +129,44 @@ jupyter nbconvert --to notebook --execute \
   --ExecutePreprocessor.kernel_name=python3
 ```
 
-## Re-run the canonical experiment
+The notebook execution itself does not need to download market data or retrain the expensive experiments.
+
+## Re-run the experiments
+
+Extended HMM run:
 
 ```bash
-python run_canonical.py
+python run_extended_analysis.py
 ```
 
-A new timestamped directory is created under `experiments_canonical/`. The frozen canonical artifact remains the source of the original headline result.
+External context diagnostics:
+
+```bash
+python analyze_extended_context.py --run-dir experiments_extended/<run_id>
+```
+
+Supervised ML baselines:
+
+```bash
+python run_supervised_baselines.py
+```
+
+Each new experiment writes a new timestamped directory and does not overwrite the verified final artifacts.
 
 ## Tests
 
-Offline protocol and extension checks:
-
 ```bash
+python -m py_compile \
+  build_final_notebook.py run_canonical.py run_extended_analysis.py \
+  run_supervised_baselines.py analyze_extended_context.py src/*.py tests/*.py
+
 python -m pytest tests/test_protocol_foundation.py tests/test_regime_extension.py -q
-```
-
-Complete suite:
-
-```bash
 python -m pytest tests/ -q
-python test_setup.py
-python -m py_compile run_canonical.py run_extended_analysis.py src/*.py tests/*.py
 ```
 
-Some legacy integration tests may require Yahoo Finance access; a network/rate-limit failure should be distinguished from a model or protocol failure.
+Network-dependent legacy tests should be distinguished from deterministic protocol failures.
 
 ## Build the paper
-
-XeLaTeX and BibTeX are required.
 
 ```bash
 cd reports
@@ -159,14 +176,13 @@ xelatex -interaction=nonstopmode -halt-on-error report.tex
 xelatex -interaction=nonstopmode -halt-on-error report.tex
 ```
 
-## Repository status and provenance
+## Provenance
 
-- `experiments_canonical/canonical_20260810_014841/` is the frozen source for the original canonical claims.
-- `experiments_extended/` contains new robustness analyses and is versioned separately.
-- Earlier exploratory directories are retained for historical context only and must not be mixed silently with canonical conclusions.
-- `AUDIT.md` documents why older headline claims were retired.
-- `analysis/canonical_findings.md` documents the machine-readable cross-check and known schema/provenance limitations.
+- `experiments_extended/extended_20260811_121957/` is the source for the final HMM robustness and regime claims.
+- `experiments_supervised/supervised_20260811_133344/` is the source for the final supervised baseline comparison.
+- `experiments_canonical/canonical_20260810_014841/` is preserved as the earlier frozen canonical experiment and historical audit trail.
+- Earlier exploratory directories must not be mixed silently with final numerical conclusions.
 
 ## Scope
 
-Educational and academic use. The project does not provide investment advice or claim a profitable trading strategy. A central hypothesis of the extension is that the HMM may be more valuable for **conditional market-structure representation** than for next-day return prediction; this is treated as a testable empirical claim, not an assumption.
+Educational and academic use only. The project does not claim a profitable trading strategy and does not provide investment advice.
