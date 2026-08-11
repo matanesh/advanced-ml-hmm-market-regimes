@@ -29,6 +29,9 @@ REPLACEMENTS = {
 
     "בממוצע בין תשעת הנכסים: Naive train-mean משיג כ-54.54% DPA, Logistic Regression כ-54.14%, Random Forest כ-53.27%, HMM soft-posterior כ-53.06%, HistGradientBoosting כ-52.49% ו-HMM hard-state כ-52.06%.\n\nיש הצלחות מקומיות, למשל Random Forest ב-QQQ וב-BTC-USD ו-soft HMM ב-QQQ, אבל אין מודל שמנצח באופן עקבי. לכן אין בסיס לטענה שה-HMM מספק predictive edge יציב.":
     "בממוצע בין תשעת הנכסים: Naive train-mean משיג כ-54.54% DPA, Logistic Regression כ-54.14%, Discrete Markov Chain כ-53.90%, Random Forest כ-53.27%, HMM soft-posterior כ-53.06%, HistGradientBoosting כ-52.49%, HMM hard-state כ-52.06%, Naive persistence כ-50.45% ו-Moving Average 5 כ-50.27%.\n\nיש הצלחות מקומיות, למשל Random Forest ב-QQQ וב-BTC-USD ו-soft HMM ב-QQQ, אבל אין מודל שמנצח באופן עקבי. הצגת כל ה-Baselines חשובה במיוחד משום ש-Discrete Markov Chain הפשוט נמצא בממוצע מעל שני ה-HMM variants. לכן אין בסיס לטענה שה-HMM מספק predictive edge יציב.",
+
+    "לכן `crisis-like` הוא label תיאורי post-hoc הנתמך בסטטיסטיקה; הוא אינו ground truth שהוזן למודל.":
+    "לכן `crisis-like` הוא label תיאורי post-hoc הנתמך בסטטיסטיקה; הוא אינו ground truth שהוזן למודל. התנהגות ה-volume מפרידה פחות בבירור: mean log-volume change הוא בקירוב 0.21%, 0.00%, 2.11% ו--0.61% ב-States 0-3, בעוד mean absolute log-volume change נשאר בערך 23.9%-26.5%. כלומר volatility, range ו-drawdown הם המאפיינים שמבדילים את משטרי SPY בצורה הברורה יותר.",
 }
 
 
@@ -126,10 +129,11 @@ def main() -> None:
         best_idx = spy_candidates.groupby("k")["validation_log_likelihood_per_observation"].idxmax()
         spy_k_compare = spy_candidates.loc[best_idx, [
             "k", "seed", "validation_log_likelihood_per_observation",
-            "bic_train", "min_state_occupancy_pct", "fit_time_sec",
+            "aic_train", "bic_train", "min_state_occupancy_pct", "fit_time_sec",
         ]].sort_values("k").copy()
         spy_k_compare = spy_k_compare.rename(columns={
             "validation_log_likelihood_per_observation": "Val. LL / obs.",
+            "aic_train": "AIC (Train)",
             "bic_train": "BIC (Train)",
             "min_state_occupancy_pct": "Min occupancy %",
             "fit_time_sec": "Fit time sec",
@@ -146,7 +150,7 @@ def main() -> None:
         )
         '''),
         rtl_md(r'''
-        ב-SPY גם Validation likelihood וגם BIC משתפרים כאשר עוברים מ-2 ל-4 states, ולכן \(K=4\) הוא בחירה סבירה לפי פרוטוקול הניסוי. עם זאת, ב-\(K=3\) וב-\(K=4\) קיים state קטן של כ-4% מה-Train, ולכן ממשיכים לבדוק seed stability ואת מאפייני ה-states לפני שמייחסים להם משמעות כלכלית.
+        ב-SPY Validation likelihood, AIC ו-BIC מציגים אותו סדר העדפה ומעדיפים את \(K=4\). עם זאת, ב-\(K=3\) וב-\(K=4\) קיים state קטן של כ-4% מה-Train, ולכן ממשיכים לבדוק seed stability ואת מאפייני ה-states לפני שמייחסים להם משמעות כלכלית.
         '''),
     ]
     nb.cells[section5_idx:section5_idx] = k_cells
@@ -180,7 +184,8 @@ def main() -> None:
     nbformat.write(nb, NOTEBOOK)
     print(
         f"Patched {NOTEBOOK.name}: {len(REPLACEMENTS)} wording replacements, "
-        "complete baseline comparison, K table, and magnitude metrics"
+        "complete baseline comparison, K/AIC/BIC table, volume interpretation, "
+        "and magnitude metrics"
     )
 
 
