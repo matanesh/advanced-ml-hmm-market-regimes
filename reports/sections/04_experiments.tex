@@ -31,9 +31,11 @@
 \mathrm{DPA}=\frac{1}{N}\sum_{t=1}^{N}\mathbb{1}\left[\operatorname{sign}(\hat r_{t+1})=\operatorname{sign}(r_{t+1})\right].
 \end{equation}
 
-לצד DPA נמדדו MAE, RMSE ו־MAPE לצורך magnitude error \cite{hyndman2006another}. עבור מודלי classification נמדדו גם Balanced Accuracy, ROC-AUC, Log Loss ו־Brier Score. המדדים האחרונים חשובים משום ש־Accuracy רגיל עלול להיראות גבוה כאשר שיעור הימים החיוביים גבוה יחסית.
+למודלים שמחזירים תחזית מספרית לתשואה נמדדו גם MAE ו־RMSE על \textbf{next-day log return}. בנוסף נשמר MAPE על מחיר הסגירה המשתמע מהתחזית, בעיקר כדי לשמור התאמה למדדים שנקבעו בתכנון הפרויקט \cite{hyndman2006another}. MAPE אינו המדד המרכזי כאן: מחיר מחר בדרך כלל קרוב למחיר היום ולכן MAPE על מחיר יכול להיראות נמוך גם עבור Baseline פשוט, בעוד תשואה יומית יכולה להיות קרובה לאפס ולהפוך MAPE על תשואה לבלתי יציב.
 
-ל־HMM נשמרו בנוסף log-likelihood, AIC/BIC, convergence, occupancy, Transition Matrix, dwell time ו־posterior confidence. מדדים אלה אינם מדדי forecasting; הם מתארים התאמה פנימית ומבנה של המודל.
+עבור מודלי classification נמדדו גם Balanced Accuracy, ROC-AUC, Log Loss ו־Brier Score. המדדים האחרונים חשובים משום ש־Accuracy רגיל עלול להיראות גבוה כאשר שיעור הימים החיוביים גבוה יחסית.
+
+ל־HMM נשמרו בנוסף log-likelihood, AIC/BIC, convergence, occupancy, Transition Matrix, dwell time, posterior confidence וזמן התאמה. מדדים אלה אינם מדדי forecasting; הם מתארים התאמה פנימית, מורכבות ומבנה של המודל. זמן הריצה נשמר לצורך reproducibility ולא שימש לבחירת מודל.
 
 \subsection{ניסויי Robustness}
 
