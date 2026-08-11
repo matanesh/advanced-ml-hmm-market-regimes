@@ -27,6 +27,8 @@ git rev-parse HEAD
 ```bash
 python -m py_compile \
   build_final_notebook.py \
+  patch_final_notebook.py \
+  patch_protocol_clarification.py \
   run_canonical.py \
   run_extended_analysis.py \
   run_supervised_baselines.py \
@@ -40,13 +42,24 @@ If a deterministic code/protocol test fails, stop and return the full traceback.
 
 ## 3. Rebuild the final notebook
 
+Run the builder and both wording-only review patches, in this order:
+
 ```bash
 python build_final_notebook.py
+python patch_final_notebook.py
+python patch_protocol_clarification.py
 ```
 
-Confirm that it rewrites:
+Confirm that they rewrite/update:
 
 `HMM_Market_Regimes_Project.ipynb`
+
+The final protocol clarification must make the following distinction explicit:
+
+- HMM candidate selection: scaler/model fit on Train, selection on Validation;
+- final selected HMM: refit on all pre-Test history (Train+Validation), then evaluated on Test with past-only inference;
+- fixed Supervised ML baselines: fit on Train only; Validation is not used for tuning or refitting;
+- therefore the supervised comparison is supplementary and does not use an identical amount of training history to the final HMM.
 
 Then execute the notebook top-to-bottom **without rerunning the expensive experiments**:
 
@@ -71,8 +84,9 @@ QA the executed notebook:
 - all saved artifact paths resolve;
 - all important tables/figures render;
 - Hebrew Markdown remains readable RTL;
-- no network download or HMM retraining occurs during notebook execution;
-- the final conclusions are generated from the committed result artifacts.
+- no network download or HMM/supervised retraining occurs during notebook execution;
+- the final conclusions are generated from the committed result artifacts;
+- the fitting-history distinction above appears correctly in the notebook.
 
 ## 4. Compile the XeLaTeX report
 
@@ -120,7 +134,8 @@ Inspect every rendered page if your environment supports visual inspection. At m
 - no broken formulas or black-square glyphs;
 - captions are readable;
 - bibliography renders;
-- the Reinforcement Learning Future Work section is present and clearly labeled as future work, not an executed experiment.
+- the Reinforcement Learning Future Work section is present and clearly labeled as future work, not an executed experiment;
+- the protocol wording does not incorrectly claim that all final models use identical fitting history.
 
 If you cannot visually inspect images, state that explicitly in the final handoff; do not claim visual QA was performed.
 
@@ -160,9 +175,11 @@ Do not commit `.venv`, `data_cache`, `/tmp`, LaTeX auxiliary files, or rendered 
 ```bash
 git add HMM_Market_Regimes_Project.ipynb reports/report.pdf
 # Add source fixes only if you made any.
-git add reports/report.tex reports/sections reports/references.bib build_final_notebook.py CHANGES.md FINAL_SUBMISSION_EXECUTION.md 2>/dev/null || true
+git add reports/report.tex reports/sections reports/references.bib \
+  build_final_notebook.py patch_final_notebook.py patch_protocol_clarification.py \
+  CHANGES.md FINAL_SUBMISSION_EXECUTION.md 2>/dev/null || true
 
-git commit -m "Build final notebook and report from verified results"
+git commit -m "Build final submission after protocol QA"
 git push origin review/regime-robustness-extension
 ```
 
@@ -180,6 +197,8 @@ Return:
 - PDF page count;
 - whether visual QA was actually performed;
 - full pytest pass/fail count and failure classification;
+- TeX overfull/underfull counts;
+- unresolved citation/reference count;
 - any warnings or changes you had to make.
 
-Do not merge branches. Stop after pushing the final artifacts so the review agent can perform one last content/visual audit before merge to `main`.
+Do not merge branches. Stop after pushing the final artifacts so the review agent can perform one last content audit before merge to `main`.
