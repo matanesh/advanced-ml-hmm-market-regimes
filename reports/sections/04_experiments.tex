@@ -1,19 +1,19 @@
-\section{ניסויים, Baselines ומדדי הערכה}
+\section{ניסויים, \tech{Baselines} ומדדי הערכה}
 
-\subsection{Baselines פשוטים}
+\subsection{\tech{Baselines} פשוטים}
 
 ה־HMM הושווה תחילה לארבעה כללים פשוטים, כדי לוודא שכל יתרון אינו נובע רק ממגמת שוק בסיסית:
 
 \begin{itemize}
-    \item \textbf{Naive - train mean:} זהו השם שנשמר ב־artifact. בהערכת ה־Test הסופית התחזית הקבועה מבוססת למעשה על ממוצע \(\texttt{next\_log\_return}\) בכל היסטוריית ה־pre-Test הזמינה, כלומר Train+Validation, לאחר סיום model selection.
-    \item \textbf{Naive persistence:} מנבא שהכיוון הבא יהיה זהה לכיוון האחרון שנצפה.
-    \item \textbf{Moving Average 5:} כלל סיבתי המבוסס על ממוצע נע קצר של תשואות זמינות עד היום הנוכחי.
-    \item \textbf{Discrete Markov Chain:} מודל מעבר נצפה בין Up/Down ללא Hidden States; הפרמטרים נאמדים מהיסטוריית ה־pre-Test בלבד.
+    \item \textbf{\tech{Naive - train mean:}} זהו השם שנשמר ב־artifact. בהערכת ה־Test הסופית התחזית הקבועה מבוססת למעשה על ממוצע \(\texttt{next\_log\_return}\) בכל היסטוריית ה־pre-Test הזמינה, כלומר Train+Validation, לאחר סיום model selection.
+    \item \textbf{\tech{Naive persistence:}} מנבא שהכיוון הבא יהיה זהה לכיוון האחרון שנצפה.
+    \item \textbf{\tech{Moving Average 5:}} כלל סיבתי המבוסס על ממוצע נע קצר של תשואות זמינות עד היום הנוכחי.
+    \item \textbf{\tech{Discrete Markov Chain:}} מודל מעבר נצפה בין Up/Down ללא Hidden States; הפרמטרים נאמדים מהיסטוריית ה־pre-Test בלבד.
 \end{itemize}
 
 שלושת ה־Baselines הפשוטים שדורשים אומדן היסטורי משתמשים, כמו ה־HMM הסופי, במידע שהיה זמין לפני תחילת ה־Test. אף אחד מהם אינו משתמש ב־Test targets לצורך התאמה.
 
-\subsection{Supervised ML Baselines}
+\subsection{\tech{Supervised ML Baselines}}
 
 כדי לבדוק אם הקושי החיזויי נובע מבחירת HMM דווקא, נוספו שלושה classifiers המקבלים בדיוק את אותו Feature Vector ואותו split כרונולוגי:
 
@@ -39,7 +39,7 @@
 
 ל־HMM נשמרו בנוסף log-likelihood, AIC/BIC, convergence, occupancy, Transition Matrix, dwell time, posterior confidence וזמן התאמה. מדדים אלה אינם מדדי forecasting; הם מתארים התאמה פנימית, מורכבות ומבנה של המודל. זמן הריצה נשמר לצורך reproducibility ולא שימש לבחירת מודל.
 
-\subsection{ניסויי Robustness}
+\subsection{ניסויי \tech{Robustness}}
 
 מעבר ל־held-out split נוספו שלושה סוגי בדיקות:
 

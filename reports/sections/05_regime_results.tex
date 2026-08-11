@@ -11,7 +11,7 @@
 \small
 \begin{tabular}{c r r r r}
 \toprule
-\(K\) & Seed & Val. LL / obs. & BIC (Train) & Min occupancy (\%) \\
+\(K\) & \tech{Seed} & \tech{Val. LL / obs.} & \tech{BIC (Train)} & \tech{Min occupancy (\%)} \\
 \midrule
 2 & 789 & -5.206 & 14935.6 & 30.19 \\
 3 & 123 & -4.759 & 13415.1 & 4.16 \\
@@ -33,7 +33,7 @@
 \label{fig:seedstability}
 \end{figure}
 
-\subsection{פירוש states ב־SPY}
+\subsection{פירוש \tech{states} ב־\asset{SPY}}
 
 \asset{SPY} משמש מקרה המבחן המרכזי. הטבלה הבאה מסכמת את ארבעת ה־states על פני ההיסטוריה. השמות הם פרשנות post-hoc בלבד; הם לא הוזנו למודל.
 
@@ -42,13 +42,13 @@
 \small
 \begin{tabular}{c l r r r r r r}
 \toprule
-State & פרשנות & שכיחות & תשואה & Vol. & Range & Mean DD & משך \\
+\tech{State} & פרשנות & שכיחות & תשואה & \tech{Vol.} & \tech{Range} & \tech{Mean DD} & משך \\
  & & (\%) & יומית (\%) & (\%) & (\%) & (\%) & ימים \\
 \midrule
-0 & Normal / moderate & 34.31 & 0.053 & 0.692 & 0.841 & -1.72 & 25.0 \\
-1 & Calm / low-vol & 25.00 & 0.092 & 0.415 & 0.586 & -0.42 & 32.4 \\
-2 & Rare stress / crisis-like & 4.46 & -0.265 & 3.409 & 3.614 & -15.28 & 8.0 \\
-3 & Persistent high-vol & 36.23 & 0.039 & 1.239 & 1.497 & -8.11 & 35.2 \\
+0 & \tech{Normal / moderate} & 34.31 & 0.053 & 0.692 & 0.841 & -1.72 & 25.0 \\
+1 & \tech{Calm / low-vol} & 25.00 & 0.092 & 0.415 & 0.586 & -0.42 & 32.4 \\
+2 & \tech{Rare stress / crisis-like} & 4.46 & -0.265 & 3.409 & 3.614 & -15.28 & 8.0 \\
+3 & \tech{Persistent high-vol} & 36.23 & 0.039 & 1.239 & 1.497 & -8.11 & 35.2 \\
 \bottomrule
 \end{tabular}
 \caption{מאפייני states של SPY. Vol. היא סטיית תקן יומית ו־Mean DD הוא drawdown ממוצע.}
@@ -66,7 +66,7 @@ State 2 בולט במיוחד: הוא נדיר, בעל תשואה יומית מ�
 \label{fig:spyregimes}
 \end{figure}
 
-\subsection{Posterior uncertainty סביב מעברים}
+\subsection{\tech{Posterior uncertainty} סביב מעברים}
 
 ה־posterior confidence הממוצע ב־SPY הוא כ־\pct{96.6}. עם זאת, ה־entropy הממוצע בימי state switch הוא 0.307 לעומת 0.054 בלבד בימים ללא switch. גם בחלון של יום לפני/אחרי מעבר מתקבל entropy ממוצע של כ־0.236. לעומת זאת, המתאם בין entropy לבין absolute return הוא רק 0.027, והמתאם עם rolling volatility הוא כ־-0.076.
 
@@ -79,7 +79,7 @@ State 2 בולט במיוחד: הוא נדיר, בעל תשואה יומית מ�
 \label{fig:entropy}
 \end{figure}
 
-\subsection{External validation מול VIX}
+\subsection{\tech{External validation} מול \asset{VIX}}
 
 ה־VIX לא שימש Feature ולא השתתף באימון. לכן הוא משמש בדיקת post-hoc חיצונית של פרשנות ה־states, ולא בדיקת forecasting. בתקופת החפיפה של 412 ימי Test, State 1 של SPY היה קשור ל־VIX ממוצע של 12.96, State 0 ל־15.34 ו־State 3 ל־18.55. ב־State 3 כ־\pct{26.1} מהימים היו מעל VIX=20, לעומת \pct{6.15} ב־State 0 ואפס ב־State 1.
 
@@ -92,7 +92,7 @@ State 2 בולט במיוחד: הוא נדיר, בעל תשואה יומית מ�
 
 State 2 הנדיר לא הופיע בחפיפה זו ולכן אי אפשר להשתמש ב־VIX כדי לאמת אותו בתקופת ה־Test. בנוסף, entropy עצמו כמעט אינו מתואם עם רמת VIX, ולכן אין לזהות בין ``אי־ודאות של ה־HMM'' לבין ``פחד בשוק''.
 
-\subsection{Cross-asset behavior}
+\subsection{\tech{Cross-asset behavior}}
 
 כדי לבדוק האם state של SPY משקף מצב שוק רחב יותר, חושבו סטטיסטיקות של נכסים אחרים מותנות ב־SPY state. ב־State 3 הקורלציה עם SPY מגיעה לכ־0.978 ב־QQQ, 0.773 ב־HYG, 0.631 ב־BTC-USD, 0.680 ב־JPM ו־0.769 ב־NVDA. באותו state, TLT נמצא בקורלציה קרובה לאפס ואף מעט שלילית (-0.044).
 
@@ -101,7 +101,7 @@ State 2 הנדיר לא הופיע בחפיפה זו ולכן אי אפשר לה
 \small
 \begin{tabular}{l r r r}
 \toprule
-Asset & Corr. State 0 & Corr. State 1 & Corr. State 3 \\
+\tech{Asset} & \tech{Corr. State 0} & \tech{Corr. State 1} & \tech{Corr. State 3} \\
 \midrule
 \asset{QQQ} & 0.924 & 0.849 & 0.978 \\
 \asset{IWM} & 0.733 & 0.240 & 0.879 \\

@@ -9,17 +9,17 @@
 \small
 \begin{tabular}{l r}
 \toprule
-Model & Mean DPA (\%) \\
+\tech{Model} & \tech{Mean DPA (\%)} \\
 \midrule
-Naive - train mean & 54.54 \\
-Logistic Regression & 54.14 \\
-Discrete Markov Chain & 53.90 \\
-Random Forest Classifier & 53.27 \\
-Gaussian HMM - soft posterior & 53.06 \\
-HistGradientBoostingClassifier & 52.49 \\
-Gaussian HMM - hard state & 52.06 \\
-Naive - persistence & 50.45 \\
-Moving Average 5 & 50.27 \\
+\tech{Naive - train mean} & 54.54 \\
+\tech{Logistic Regression} & 54.14 \\
+\tech{Discrete Markov Chain} & 53.90 \\
+\tech{Random Forest Classifier} & 53.27 \\
+\tech{Gaussian HMM - soft posterior} & 53.06 \\
+\tech{HistGradientBoostingClassifier} & 52.49 \\
+\tech{Gaussian HMM - hard state} & 52.06 \\
+\tech{Naive - persistence} & 50.45 \\
+\tech{Moving Average 5} & 50.27 \\
 \bottomrule
 \end{tabular}
 \caption{ממוצע DPA בין תשעת הנכסים לכל המודלים שנבדקו. הממוצע אינו שקול למבחן מובהקות ואינו מוכיח עליונות כללית של אף מודל.}
@@ -39,7 +39,7 @@ Moving Average 5 & 50.27 \\
 
 הפיזור הזה חשוב יותר מהדירוג הממוצע: HMM אינו נכשל בכל נכס, אך גם אינו מנצח בצורה יציבה. אותו דבר נכון למודלי ה־Supervised ML ול־Baselines הקלאסיים. לכן אין evidence לכך שה־Feature Vector הנוכחי מכיל signal חזק ועקבי לחיזוי next-day direction.
 
-\subsection{שגיאת magnitude: דוגמת SPY}
+\subsection{שגיאת \tech{magnitude}: דוגמת \asset{SPY}}
 
 DPA בודק רק את סימן התחזית, ולכן עבור המודלים שמחזירים תחזית מספרית לתשואה נבדקו גם MAE ו־RMSE על next-day log return ו־MAPE על מחיר הסגירה המשתמע. הטבלה הבאה מציגה את \asset{SPY}, מקרה הייחוס המרכזי:
 
@@ -48,14 +48,14 @@ DPA בודק רק את סימן התחזית, ולכן עבור המודלים �
 \small
 \begin{tabular}{l r r r r}
 \toprule
-Model & DPA (\%) & MAE return & RMSE return & MAPE price (\%) \\
+\tech{Model} & \tech{DPA (\%)} & \tech{MAE return} & \tech{RMSE return} & \tech{MAPE price (\%)} \\
 \midrule
-Naive - train mean & 58.50 & 0.00577 & 0.00766 & 0.577 \\
-Naive - persistence & 53.16 & 0.00816 & 0.01043 & 0.816 \\
-Moving Average 5 & 53.16 & 0.00651 & 0.00846 & 0.651 \\
-Discrete Markov Chain & 58.50 & 0.00579 & 0.00769 & 0.579 \\
-Gaussian HMM - hard state & 58.50 & 0.00577 & 0.00767 & 0.577 \\
-Gaussian HMM - soft posterior & 58.50 & 0.00577 & 0.00767 & 0.577 \\
+\tech{Naive - train mean} & 58.50 & 0.00577 & 0.00766 & 0.577 \\
+\tech{Naive - persistence} & 53.16 & 0.00816 & 0.01043 & 0.816 \\
+\tech{Moving Average 5} & 53.16 & 0.00651 & 0.00846 & 0.651 \\
+\tech{Discrete Markov Chain} & 58.50 & 0.00579 & 0.00769 & 0.579 \\
+\tech{Gaussian HMM - hard state} & 58.50 & 0.00577 & 0.00767 & 0.577 \\
+\tech{Gaussian HMM - soft posterior} & 58.50 & 0.00577 & 0.00767 & 0.577 \\
 \bottomrule
 \end{tabular}
 \caption{מדדי חיזוי מספריים על SPY. ההבדלים בין Naive train-mean ל־HMM קטנים מאוד; MAPE על מחיר מוצג כמדד משלים בלבד.}
@@ -70,13 +70,13 @@ Gaussian HMM - soft posterior & 58.50 & 0.00577 & 0.00767 & 0.577 \\
 
 זו הסיבה שבדוח לא מתייחסים ל־DPA מעל \pct{50} כהוכחה אוטומטית ל־predictive edge. מודל שמנבא את המחלקה הנפוצה יכול לקבל Accuracy סביר גם בלי להבין את דינמיקת היום הבא.
 
-\subsection{Hard state לעומת Soft posterior}
+\subsection{\tech{Hard state} לעומת \tech{Soft posterior}}
 
 בממוצע, soft HMM משיג \pct{53.06} לעומת \pct{52.06} ל־hard-state. הפער קטן, אך הוא עקבי עם האינטואיציה שלפיה שימוש בכל וקטור ה־posterior שומר מידע שנזרק ב־argmax. לדוגמה, ב־\asset{QQQ} hard HMM הגיע ל־\pct{56.31} בעוד soft HMM הגיע ל־\pct{58.98}; ב־\asset{BTC-USD} הפער גדול יותר, \pct{48.13} לעומת \pct{52.05}. מנגד קיימים גם נכסים שבהם soft אינו משפר.
 
 לכן המסקנה אינה ש־soft posterior ``פותר'' את forecasting, אלא שהוא דרך הגיונית יותר לנצל posterior uncertainty מאשר hard assignment כאשר משתמשים ב־HMM לתחזית.
 
-\subsection{Walk-forward robustness על SPY}
+\subsection{\tech{Walk-forward robustness} על \asset{SPY}}
 
 שלושת ה־walk-forward folds מציגים תמונה מעורבת. soft HMM השיג בהתאמה \pct{50.36}, \pct{51.82} ו־\pct{60.22}; Naive train-mean השיג \pct{48.54}, \pct{52.92} ו־\pct{59.85}. הממוצע הוא \pct{54.14} ל־soft HMM לעומת \pct{53.77} ל־Naive, אך HMM אינו מנצח בכל fold והפער הכולל קטן.
 

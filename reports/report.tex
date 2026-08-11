@@ -103,8 +103,8 @@
 \renewcommand{\headrule}{\hbox to\headwidth{\color{linegray}\leaders\hrule height \headrulewidth\hfill}}
 \setlength{\headheight}{17pt}
 
-\newcommand{\tech}[1]{\LR{#1}}
-\newcommand{\asset}[1]{\LR{#1}}
+\DeclareRobustCommand{\tech}[1]{\LR{#1}}
+\DeclareRobustCommand{\asset}[1]{\LR{#1}}
 \newcommand{\pct}[1]{\LR{#1\%}}
 \newcommand{\datecode}[1]{\mbox{\textenglish{#1}}}
 % Long run IDs and paths should be allowed to break at punctuation. \nolinkurl
@@ -155,7 +155,11 @@
 \pagenumbering{roman}
 \input{sections/00_abstract}
 \clearpage
+\begingroup
+\small
+\setlength{\parskip}{0pt}
 \tableofcontents
+\endgroup
 \thispagestyle{plain}
 \clearpage
 \pagenumbering{arabic}
@@ -172,10 +176,13 @@
 \input{sections/10_reproducibility}
 
 \clearpage
-\bibliographystyle{plain}
 \begingroup
 \small
+\begin{english}
+\renewcommand{\refname}{\makebox[\textwidth][r]{\texthebrew{מקורות}}}
+\bibliographystyle{plain}
 \bibliography{references}
+\end{english}
 \endgroup
 
 \end{document}

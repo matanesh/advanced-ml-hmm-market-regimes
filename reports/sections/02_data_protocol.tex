@@ -1,4 +1,4 @@
-\section{נתונים, Features ופרוטוקול ניסוי}
+\section{נתונים, \tech{Features} ופרוטוקול ניסוי}
 
 \subsection{פאנל הנכסים}
 
@@ -20,7 +20,7 @@
 
 ההורדה בוצעה עם \tech{auto\_adjust=False}. לחישובי התשואה והיעד נעשה שימוש ב־\tech{Adj Close} כאשר העמודה זמינה, וב־\tech{Close} כ־fallback. אין השלמה מלאכותית של ימים חסרים: שורות OHLCV חסרות או ערכים לא־סופיים מוסרים, ולאחר בניית Features מוסרות גם שורות שאין עבורן היסטוריית rolling מספקת או target של יום הבא. בניתוח cross-asset נעשה שימוש רק בתאריכים החופפים בפועל בין הסדרות.
 
-\subsection{Feature Vector}
+\subsection{\tech{Feature Vector}}
 
 לכל יום \(t\) נבנה וקטור תצפיות בן ארבעה רכיבים:
 
@@ -52,6 +52,6 @@ y_t = \mathbb{1}[r_{t+1}\ge 0].
 
 בריצת ה־Supervised ML הוגדרו hyperparameters קבועים מראש ולכן לא בוצע model selection על Validation. שלושת ה־classifiers, ובפרט ה־scaler של Logistic Regression, הותאמו על Train בלבד ונבדקו על אותו Test כרונולוגי. נשמרו assertions מפורשים כי target-safe split מתקיים, אין shuffle, ו־Test אינו משמש לבחירה או התאמה. לכן ההשוואה משתמשת באותו Feature Vector ובאותו Test, אך היקף היסטוריית האימון אינו זהה לחלוטין בין ה־HMM הסופי לבין מודלי ה־Supervised; הנקודה הזו נלקחת בחשבון בפרשנות התוצאות.
 
-\subsection{שחזור ומעקב אחר provenance}
+\subsection{שחזור ומעקב אחר \tech{provenance}}
 
 כל ריצה נשמרת בתיקייה חדשה עם manifest המכיל תאריך, Git commit, גרסאות packages, רשימת נכסים, Features, seeds, hyperparameters וסטטוס השלמה. הריצה המרכזית של ה־HMM היא \code{extended_20260811_121957}, והריצה של מודלי ה־Supervised ML היא \code{supervised_20260811_133344}. תוצאות קודמות נשמרו לצורך audit אך אינן משמשות לטענות המספריות בדוח זה.

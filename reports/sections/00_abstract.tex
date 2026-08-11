@@ -5,7 +5,7 @@
 
 מבחינת חיזוי, לא נמצא יתרון עקבי ל־HMM. ממוצע ה־DPA בין תשעת הנכסים היה \pct{54.54} ל־Naive train-mean, \pct{54.14} ל־Logistic Regression, \pct{53.90} ל־Discrete Markov Chain, \pct{53.27} ל־Random Forest, \pct{53.06} ל־HMM soft-posterior, \pct{52.49} ל־HistGradientBoosting ו־\pct{52.06} ל־HMM hard-state; Naive persistence ו־Moving Average 5 היו קרובים ל־\pct{50}. לעומת זאת, ברמת ייצוג מבנה השוק התקבלו ממצאים תיאוריים ברורים יותר. ב־SPY, מודל \(K=4\) יצר states בעלי תשואה, volatility, drawdown, range ומשך שהייה שונים מאוד; ה־posterior entropy עלה סביב מעברי state; מבנה המצבים היה יציב מאוד בין seeds; ומדד VIX, שלא שימש באימון, הפריד בין חלק מהמשטרים. בנוסף נמצא כי הקורלציות בין SPY לנכסים אחרים משתנות כתלות במשטר.
 
-המסקנה המרכזית היא כי בפרויקט זה ה־HMM שימושי יותר כ־\textbf{latent market-state estimator} מאשר כמודל point forecasting ליום הבא. אין בעבודה טענה לרווחיות מסחר, למובהקות סטטיסטית של ההבדלים התיאוריים או ליתרון כללי של HMM על פני מודלים אחרים.
+המסקנה המרכזית היא כי בפרויקט זה ה־HMM שימושי יותר כ־\textbf{\tech{latent market-state estimator}} מאשר כמודל point forecasting ליום הבא. אין בעבודה טענה לרווחיות מסחר, למובהקות סטטיסטית של ההבדלים התיאוריים או ליתרון כללי של HMM על פני מודלים אחרים.
 \end{abstract}
 
 \textbf{מילות מפתח:} \tech{Hidden Markov Model}, משטרי שוק, \tech{posterior uncertainty}, \tech{directional prediction}, \tech{walk-forward}, \tech{Supervised Learning}, \tech{Reinforcement Learning}.

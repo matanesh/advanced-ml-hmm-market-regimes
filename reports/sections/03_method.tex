@@ -1,8 +1,8 @@
 \section{מתודולוגיה}
 
-\subsection{Hidden Markov Model}
+\subsection{\tech{Hidden Markov Model}}
 
-נסמן ב־\(S_t\in\{1,\ldots,K\}\) את ה־Hidden State בזמן \(t\). הנחת Markov מסדר ראשון היא:
+נסמן ב־\(S_t\in\{1,\ldots,K\}\) את ה־\tech{Hidden State} בזמן \(t\). הנחת Markov מסדר ראשון היא:
 
 \begin{equation}
 P(S_t\mid S_1,\ldots,S_{t-1}) = P(S_t\mid S_{t-1}).
@@ -16,21 +16,21 @@ a_{ij}=P(S_t=j\mid S_{t-1}=i),
 
 ולכן האלכסון שלה מתאר persistence: ערך גבוה של \(a_{ii}\) פירושו שהמודל מצפה להישאר באותו state.
 
-ב־Gaussian HMM התצפית המולטיווריאטית תלויה ב־state דרך Gaussian emission:
+ב־\tech{Gaussian HMM} התצפית המולטיווריאטית תלויה ב־state דרך \tech{Gaussian emission}:
 
 \begin{equation}
 \mathbf{X}_t\mid S_t=k \sim \mathcal{N}(\boldsymbol{\mu}_k,\Sigma_k).
 \end{equation}
 
-בפרויקט נעשה שימוש ב־\tech{hmmlearn} \cite{hmmlearn} עם covariance מסוג full. פרמטרי המודל נלמדים באמצעות Baum-Welch / EM \cite{baum1970maximization}. האלגוריתם מבצע לסירוגין חישוב posterior על רצף המצבים ועדכון של הסתברויות המעבר ופרמטרי הפליטה, עד convergence.
+בפרויקט נעשה שימוש ב־\tech{hmmlearn} \cite{hmmlearn} עם covariance מסוג full. פרמטרי המודל נלמדים באמצעות \tech{Baum-Welch / EM} \cite{baum1970maximization}. האלגוריתם מבצע לסירוגין חישוב posterior על רצף המצבים ועדכון של הסתברויות המעבר ופרמטרי הפליטה, עד convergence.
 
 \subsection{בחירת מספר המצבים}
 
-לכל נכס נבדקו \(K=2,3,4\) וחמישה seeds: \(42,123,456,789,2026\). הבחירה של \(K\) ו־seed נעשתה לפי Validation log-likelihood בלבד. AIC ו־BIC נשמרו כאבחוני complexity נוספים \cite{akaike1974new,schwarz1978estimating}, אך Test לא שימש בשום שלב של model selection.
+לכל נכס נבדקו \(K=2,3,4\) וחמישה seeds: \(42,123,456,789,2026\). הבחירה של \(K\) ו־seed נעשתה לפי \tech{Validation log-likelihood} בלבד. AIC ו־BIC נשמרו כאבחוני complexity נוספים \cite{akaike1974new,schwarz1978estimating}, אך Test לא שימש בשום שלב של model selection.
 
 בחירת מספר states ב־HMM אינה בעיה טריוויאלית: מודל עשיר יותר יכול לשפר likelihood אך גם ליצור states נדירים או רגישים לאתחול \cite{pohle2017selecting}. לכן בנוסף לציון ההתאמה נבדקו occupancy ויציבות בין seeds.
 
-\subsection{Hard state לעומת Soft posterior}
+\subsection{\tech{Hard state} לעומת \tech{Soft posterior}}
 
 ב־hard decoding כל יום מקבל state יחיד. לצורך ההערכה מחוץ למדגם השתמשנו ב־\textbf{past-only inference}: עבור יום Test בזמן \(t\), רצף הקלט נחתך כך שאינו כולל תצפיות אחרי \(t\). לכן וקטור ההסתברויות שבו משתמשת התחזית הוא
 
@@ -50,7 +50,7 @@ H_t=-\frac{\sum_{k=1}^{K}\gamma_t(k)\log\gamma_t(k)}{\log K}.
 
 \(H_t\) קרוב לאפס כאשר posterior מרוכז כמעט כולו ב־state אחד, וגדל כאשר כמה states מקבלים הסתברויות דומות.
 
-\subsection{Persistence ומשך משטר}
+\subsection{\tech{Persistence} ומשך משטר}
 
 ב־HMM מסדר ראשון משך השהייה ב־state הוא גאומטרי. הממוצע המשתמע מ־self-transition probability הוא:
 
@@ -58,4 +58,4 @@ H_t=-\frac{\sum_{k=1}^{K}\gamma_t(k)\log\gamma_t(k)}{\log K}.
 E[D_i]=\frac{1}{1-a_{ii}}.
 \end{equation}
 
-בדוח משווים את הערך הזה ל־decoded empirical mean duration. השוואה זו אינה בודקת את כל התפלגות ה־duration, ולכן Hidden Semi-Markov Model נשאר הרחבה אפשרית כאשר רוצים למדל duration במפורש \cite{bulla2006application}.
+בדוח משווים את הערך הזה ל־decoded empirical mean duration. השוואה זו אינה בודקת את כל התפלגות ה־duration, ולכן \tech{Hidden Semi-Markov Model} נשאר הרחבה אפשרית כאשר רוצים למדל duration במפורש \cite{bulla2006application}.

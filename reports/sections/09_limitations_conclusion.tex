@@ -21,6 +21,6 @@
 
 מבחינת latent structure, התוצאה חזקה יותר. ב־SPY מתקבלים ארבעה states בעלי מאפייני return, volatility, range, drawdown ומשך שונים. State נדיר אחד מציג מאפייני stress ברורים. חלוקת \(K=4\) יציבה מאוד בין seeds; posterior entropy עולה סביב state switches אך מפורש כ־diagnostic פנימי של ambiguity; VIX חיצוני מפריד בין חלק מה־states; והקורלציה של SPY עם נכסי risk אחרים משתנה כתלות במשטר.
 
-לכן המסקנה הסופית היא שה־Gaussian HMM בפרויקט זה מתאים יותר ל־\textbf{modeling conditional market structure} מאשר ל־\textbf{point forecasting}. הערך שלו אינו בכך שהוא יודע בוודאות מה יקרה מחר, אלא בכך שהוא נותן הקשר הסתברותי: באיזה סוג regime השוק נמצא, כמה state זה מתמשך, כמה המודל בטוח בזיהוי, וכיצד מבנה הסיכון והקשרים בין נכסים משתנים יחד איתו.
+לכן המסקנה הסופית היא שה־Gaussian HMM בפרויקט זה מתאים יותר ל־\textbf{\tech{modeling conditional market structure}} מאשר ל־\textbf{\tech{point forecasting}}. הערך שלו אינו בכך שהוא יודע בוודאות מה יקרה מחר, אלא בכך שהוא נותן הקשר הסתברותי: באיזה סוג regime השוק נמצא, כמה state זה מתמשך, כמה המודל בטוח בזיהוי, וכיצד מבנה הסיכון והקשרים בין נכסים משתנים יחד איתו.
 
-הרחבה טבעית היא להשתמש ב־posterior של ה־HMM כ־state representation בתוך Regime-aware Reinforcement Learning, ולבדוק האם מידע זה משפר policy לאורך זמן תחת transaction costs ו־walk-forward evaluation. זוהי שאלה מחקרית שונה מהחיזוי שנבדק כאן, והיא דורשת ניסוי נפרד ולא inference מתוך התוצאות הנוכחיות.
+הרחבה טבעית היא להשתמש ב־posterior של ה־HMM כ־state representation בתוך \tech{Regime-aware Reinforcement Learning}, ולבדוק האם מידע זה משפר policy לאורך זמן תחת transaction costs ו־walk-forward evaluation. זוהי שאלה מחקרית שונה מהחיזוי שנבדק כאן, והיא דורשת ניסוי נפרד ולא inference מתוך התוצאות הנוכחיות.
