@@ -18,6 +18,7 @@ The final evidence supports the second use more strongly than the first. The HMM
 | Bibliography | `reports/references.bib` |
 | Executed notebook | `HMM_Market_Regimes_Project.ipynb` |
 | Notebook builder | `build_final_notebook.py` |
+| Final notebook review patch | `patch_final_notebook.py` |
 | Extended HMM runner | `run_extended_analysis.py` |
 | External-context analysis | `analyze_extended_context.py` |
 | Supervised ML baselines | `run_supervised_baselines.py` |
@@ -33,7 +34,7 @@ The final panel is economically diverse rather than a large redundant list of st
 
 `SPY`, `QQQ`, `IWM`, `TLT`, `GLD`, `HYG`, `BTC-USD`, `JPM`, `NVDA`.
 
-Requested date range: `2014-01-01` through `2024-12-31`.
+Requested date range: `2014-01-01` through `2024-12-31`. This is a common request window rather than an identical observed start date for every asset; `BTC-USD`, in particular, begins later in the available source data.
 
 Features:
 
@@ -51,7 +52,8 @@ Protocol:
 - HMM `K ∈ {2,3,4}`;
 - HMM seeds `{42,123,456,789,2026}`;
 - model selection using Validation log-likelihood only;
-- Test kept outside model selection.
+- Test kept outside model selection;
+- past-only HMM inference on held-out dates, so no future Test observation affects an earlier state estimate used for forecasting.
 
 ## Final HMM analyses
 
@@ -65,6 +67,8 @@ The extended experiment adds:
 - SPY-conditioned cross-asset behavior;
 - external post-hoc validation against VIX, which is **not** a training feature;
 - empirical state duration versus the first-order HMM geometric-duration implication.
+
+Posterior entropy around hard state switches is treated as an **internal ambiguity/confidence diagnostic**, not as independent external validation, because the hard switch itself is derived from the same posterior distribution.
 
 ## Supervised ML baselines
 
@@ -91,7 +95,7 @@ Mean directional prediction accuracy across the nine assets is approximately:
 
 No model demonstrates a stable universal forecasting advantage.
 
-The stronger HMM findings concern regime structure. For SPY, the selected `K=4` model produces states with materially different return, volatility, daily range, drawdown and dwell-time characteristics. Its state partition is highly stable across seeds (mean pairwise ARI ≈ 0.995). Posterior entropy rises sharply around state switches, VIX separates several inferred states despite not being a feature, and cross-asset correlations change with the SPY hidden state.
+The stronger HMM findings concern regime structure. For SPY, the selected `K=4` model produces states with materially different return, volatility, daily range, drawdown and dwell-time characteristics. Its state partition is highly stable across seeds (mean pairwise ARI ≈ 0.995). VIX separates several inferred states despite not being a feature, and cross-asset correlations change with the SPY hidden state. These latter associations are reported descriptively; the smaller SPY states contain relatively few Test observations and no significance or causal claim is made.
 
 Therefore the final conclusion is deliberately cautious:
 
@@ -118,10 +122,11 @@ python -m pip install -r requirements.txt
 
 ## Build the final notebook
 
-The notebook is deterministically generated from the verified artifacts:
+The notebook is deterministically generated from the verified artifacts and then receives a small wording-only final academic-review patch:
 
 ```bash
 python build_final_notebook.py
+python patch_final_notebook.py
 jupyter nbconvert --to notebook --execute \
   HMM_Market_Regimes_Project.ipynb \
   --output /tmp/HMM_verified.ipynb \
@@ -129,7 +134,7 @@ jupyter nbconvert --to notebook --execute \
   --ExecutePreprocessor.kernel_name=python3
 ```
 
-The notebook execution itself does not need to download market data or retrain the expensive experiments.
+The patch changes only explanatory Markdown; it does not modify numerical results, code outputs or experimental artifacts. The notebook execution itself does not need to download market data or retrain the expensive experiments.
 
 ## Re-run the experiments
 
@@ -157,7 +162,7 @@ Each new experiment writes a new timestamped directory and does not overwrite th
 
 ```bash
 python -m py_compile \
-  build_final_notebook.py run_canonical.py run_extended_analysis.py \
+  build_final_notebook.py patch_final_notebook.py run_canonical.py run_extended_analysis.py \
   run_supervised_baselines.py analyze_extended_context.py src/*.py tests/*.py
 
 python -m pytest tests/test_protocol_foundation.py tests/test_regime_extension.py -q
