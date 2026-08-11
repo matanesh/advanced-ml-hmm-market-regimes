@@ -46,9 +46,11 @@ r_t = \log\left(\frac{P_t}{P_{t-1}}\right)
 y_t = \mathbb{1}[r_{t+1}\ge 0].
 \end{equation}
 
-החלוקה היא כרונולוגית בקירוב \pct{70} Train, \pct{15} Validation ו־\pct{15} Test. אין shuffle. כדי למנוע leakage בגבולות, שורה אחרונה בכל partition מוסרת אם ה־target שלה שייך כבר ל־partition הבא. scaling מותאם על Train בלבד ולאחר מכן מוחל על Validation ו־Test.
+החלוקה היא כרונולוגית בקירוב \pct{70} Train, \pct{15} Validation ו־\pct{15} Test. אין shuffle. כדי למנוע leakage בגבולות, שורה אחרונה בכל partition מוסרת אם ה־target שלה שייך כבר ל־partition הבא.
 
-בריצת ה־Supervised ML נשמרו assertions מפורשים המוודאים עבור כל תשעת הנכסים כי \tech{target-safe split} מתקיים, אין shuffle, ה־scaler מותאם על Train בלבד, ו־Test אינו משמש לבחירת מודל. בכך נשמרת השוואה הוגנת בין כל משפחות המודלים.
+חשוב להבחין בין \textbf{שלב בחירת המודל} לבין \textbf{ההתאמה הסופית לפני Test}. בזמן השוואת מועמדי HMM, ה־scaler מותאם על Train בלבד, המועמדים מאומנים על Train ונמדדים על Validation. רק לאחר ש־\(K\) וה־seed ננעלים, ה־HMM הנבחר וה־scaler מותאמים מחדש על כל היסטוריית pre-Test, כלומר Train+Validation, ואז Test נשאר מחוץ לאימון ולהתאמת ה־preprocessing. זהו refit סטנדרטי לאחר model selection ואינו חושף את המודל ל־Test.
+
+בריצת ה־Supervised ML הוגדרו hyperparameters קבועים מראש ולכן לא בוצע model selection על Validation. שלושת ה־classifiers, ובפרט ה־scaler של Logistic Regression, הותאמו על Train בלבד ונבדקו על אותו Test כרונולוגי. נשמרו assertions מפורשים כי target-safe split מתקיים, אין shuffle, ו־Test אינו משמש לבחירה או התאמה. לכן ההשוואה משתמשת באותו Feature Vector ובאותו Test, אך היקף היסטוריית האימון אינו זהה לחלוטין בין ה־HMM הסופי לבין מודלי ה־Supervised; הנקודה הזו נלקחת בחשבון בפרשנות התוצאות.
 
 \subsection{שחזור ומעקב אחר provenance}
 
