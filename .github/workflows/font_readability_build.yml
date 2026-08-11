@@ -22,7 +22,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             texlive-xetex texlive-latex-extra texlive-fonts-recommended \
-            texlive-lang-other fonts-noto-core fonts-dejavu-core poppler-utils
+            texlive-lang-other texlive-lang-arabic \
+            fonts-noto-core fonts-dejavu-core poppler-utils
 
       - name: Apply font-only patch
         run: python patch_font_readability.py
