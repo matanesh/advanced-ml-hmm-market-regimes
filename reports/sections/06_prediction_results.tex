@@ -2,38 +2,67 @@
 
 \subsection{תמונה כללית}
 
-טבלה \ref{tab:meanDPA} מציגה את ממוצע ה־DPA הבלתי־משוקלל בין תשעת הנכסים. התוצאה החשובה ביותר היא שאין מודל אחד שמציג יתרון חיזויי עקבי.
+טבלה \ref{tab:meanDPA} מציגה את ממוצע ה־DPA הבלתי־משוקלל בין תשעת הנכסים. בניגוד לגרסה מוקדמת של הסיכום, כאן מוצגים גם שלושת ה־Baselines הפשוטים שהוגדרו מראש — persistence, Moving Average ו־Discrete Markov Chain — לצד מודלי ה־Supervised ML וה־HMM. התוצאה החשובה ביותר היא שאין מודל אחד שמציג יתרון חיזויי עקבי.
 
 \begin{table}[H]
 \centering
+\small
 \begin{tabular}{l r}
 \toprule
 Model & Mean DPA (\%) \\
 \midrule
 Naive - train mean & 54.54 \\
 Logistic Regression & 54.14 \\
+Discrete Markov Chain & 53.90 \\
 Random Forest Classifier & 53.27 \\
 Gaussian HMM - soft posterior & 53.06 \\
 HistGradientBoostingClassifier & 52.49 \\
 Gaussian HMM - hard state & 52.06 \\
+Naive - persistence & 50.45 \\
+Moving Average 5 & 50.27 \\
 \bottomrule
 \end{tabular}
-\caption{ממוצע DPA בין תשעת הנכסים. הממוצע אינו שקול למבחן מובהקות ואינו מוכיח עליונות כללית של אף מודל.}
+\caption{ממוצע DPA בין תשעת הנכסים לכל המודלים שנבדקו. הממוצע אינו שקול למבחן מובהקות ואינו מוכיח עליונות כללית של אף מודל.}
 \label{tab:meanDPA}
 \end{table}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\textwidth]{dpa_comparison_all_assets.png}
-\caption{השוואת DPA בין Baseline, שלושת מודלי ה־Supervised ML ו־HMM hard/soft לכל נכס.}
+\caption{השוואת DPA לפי נכס עבור Naive train-mean, שלושת מודלי ה־Supervised ML ו־HMM hard/soft. שלושת ה־Baselines הפשוטים הנוספים מוצגים בטבלה \ref{tab:meanDPA} אך אינם נכללים באיור כדי לשמור עליו קריא.}
 \label{fig:dpaall}
 \end{figure}
 
 \subsection{תוצאות לפי נכס}
 
-יש כמה מקרים מקומיים מעניינים. ב־\asset{QQQ}, Random Forest השיג \pct{59.22}, soft HMM השיג \pct{58.98}, וה־Naive baseline \pct{58.74}. ב־\asset{BTC-USD}, Random Forest השיג \pct{52.94} וה־soft HMM \pct{52.05}, לעומת \pct{51.34} ל־Naive. לעומת זאת, ב־\asset{JPM} ה־Naive הגיע ל־\pct{57.52} בעוד soft HMM הגיע ל־\pct{51.70}. ב־\asset{TLT}, HistGradientBoosting היה הטוב ביותר מבין המודלים שנבדקו עם \pct{53.40}, בעוד soft HMM הגיע ל־\pct{47.09}.
+יש כמה מקרים מקומיים מעניינים. ב־\asset{QQQ}, Random Forest השיג \pct{59.22}, soft HMM השיג \pct{58.98}, וה־Naive train-mean \pct{58.74}. ב־\asset{BTC-USD}, Random Forest השיג \pct{52.94} וה־soft HMM \pct{52.05}, לעומת \pct{51.34} ל־Naive. לעומת זאת, ב־\asset{JPM} ה־Naive הגיע ל־\pct{57.52} בעוד soft HMM הגיע ל־\pct{51.70}. ב־\asset{TLT}, HistGradientBoosting היה הטוב ביותר מבין המודלים שנבדקו עם \pct{53.40}, בעוד soft HMM הגיע ל־\pct{47.09}; ה־Discrete Markov Chain הגיע שם ל־\pct{51.94}.
 
-הפיזור הזה חשוב יותר מהדירוג הממוצע: HMM אינו נכשל בכל נכס, אך גם אינו מנצח בצורה יציבה. אותו דבר נכון למודלי ה־Supervised ML. לכן אין evidence לכך שה־Feature Vector הנוכחי מכיל signal חזק ועקבי לחיזוי next-day direction.
+הפיזור הזה חשוב יותר מהדירוג הממוצע: HMM אינו נכשל בכל נכס, אך גם אינו מנצח בצורה יציבה. אותו דבר נכון למודלי ה־Supervised ML ול־Baselines הקלאסיים. לכן אין evidence לכך שה־Feature Vector הנוכחי מכיל signal חזק ועקבי לחיזוי next-day direction.
+
+\subsection{שגיאת magnitude: דוגמת SPY}
+
+DPA בודק רק את סימן התחזית, ולכן עבור המודלים שמחזירים תחזית מספרית לתשואה נבדקו גם MAE ו־RMSE על next-day log return ו־MAPE על מחיר הסגירה המשתמע. הטבלה הבאה מציגה את \asset{SPY}, מקרה הייחוס המרכזי:
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{l r r r r}
+\toprule
+Model & DPA (\%) & MAE return & RMSE return & MAPE price (\%) \\
+\midrule
+Naive - train mean & 58.50 & 0.00577 & 0.00766 & 0.577 \\
+Naive - persistence & 53.16 & 0.00816 & 0.01043 & 0.816 \\
+Moving Average 5 & 53.16 & 0.00651 & 0.00846 & 0.651 \\
+Discrete Markov Chain & 58.50 & 0.00579 & 0.00769 & 0.579 \\
+Gaussian HMM - hard state & 58.50 & 0.00577 & 0.00767 & 0.577 \\
+Gaussian HMM - soft posterior & 58.50 & 0.00577 & 0.00767 & 0.577 \\
+\bottomrule
+\end{tabular}
+\caption{מדדי חיזוי מספריים על SPY. ההבדלים בין Naive train-mean ל־HMM קטנים מאוד; MAPE על מחיר מוצג כמדד משלים בלבד.}
+\label{tab:spymagnitude}
+\end{table}
+
+גם במדדי magnitude אין כאן יתרון מעשי גדול: hard/soft HMM כמעט זהים ל־Naive train-mean על SPY. הדבר מחזק את המסקנה שהערך המרכזי של ה־HMM בניסוי הנוכחי אינו תחזית נקודתית מדויקת יותר.
 
 \subsection{למה DPA לבדו עלול להטעות}
 
