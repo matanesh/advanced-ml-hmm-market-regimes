@@ -1,20 +1,29 @@
 #!/usr/bin/env python3
-"""
-Canonical runner for Gaussian HMM market regimes analysis.
+"""Canonical Gaussian-HMM experiment runner.
 
-This runner enforces a strict Train/Validation/Test protocol with:
-- Target-safe chronological splits (no boundary leakage)
-- Multi-start HMM fitting with selection on validation criteria only
-- Locked model evaluation on held-out test set
-- Complete diagnostics recording (convergence, iterations, LL, AIC, BIC)
-- Canonical artifact emission with manifest
+This runner preserves the original five-asset canonical question while fixing
+submission-chain issues identified during external review:
+
+- the held-out Test set is not scored before K/seed selection is locked;
+- validation observations may be used as *past context* at Test time, but never
+  as training targets for the locked HMM parameters;
+- market downloads can be cached for reproducible reruns;
+- artifact paths are registered before the manifest is written, so the on-disk
+  manifest is complete;
+- posterior uncertainty is saved as a diagnostic without changing the original
+  hard-state HMM forecast used in the canonical model comparison.
+
+Every run is written to a new timestamped directory. Existing canonical
+artifacts are never overwritten.
 """
+
+from __future__ import annotations
 
 import json
-import os
+import subprocess
 import time
 import warnings
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -23,97 +32,72 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
-# Local imports
 from src.data import (
-    load_asset,
-    validate_data,
-    build_features,
-    target_safe_train_validation_test_split,
     TargetSafeSplits,
+    build_features,
+    load_asset,
+    target_safe_train_validation_test_split,
+    validate_data,
 )
+from src.evaluation import direction_labels, evaluate_predictions, summarize_states
 from src.model import (
-    train_gaussian_hmm,
+    decode_past_only_posteriors,
     decode_past_only_states,
-    hmm_next_return_predictions,
     gaussian_hmm_diagnostics,
-)
-from src.evaluation import (
-    evaluate_predictions,
-    direction_labels,
-    summarize_states,
+    hmm_next_return_predictions,
+    posterior_confidence,
+    posterior_entropy,
+    train_gaussian_hmm,
 )
 
 warnings.filterwarnings("ignore")
 
 
-# ─── Configuration ────────────────────────────────────────────────────────
-
 @dataclass(frozen=True)
 class CanonicalConfig:
     """Immutable configuration for a canonical run."""
-    # Universe and dates (pre-specified, not selected by test performance)
+
     assets: Tuple[str, ...] = ("SPY", "GLD", "TLT", "BTC-USD", "DIS")
     start_date: str = "2014-01-01"
-    end_date: str = "2024-12-31"  # Fixed end date for reproducibility
-
-    # Chronological protocol
+    end_date: str = "2024-12-31"
     validation_size: float = 0.15
     test_size: float = 0.15
-
-    # Features (fixed)
     feature_cols: Tuple[str, ...] = (
         "log_return",
         "rolling_volatility_20",
         "daily_range",
         "volume_change",
     )
-
-    # HMM hyperparameters (pre-specified)
     k_values: Tuple[int, ...] = (2, 3, 4)
     covariance_type: str = "full"
     n_iter: int = 300
     tol: float = 1e-4
-    seeds: Tuple[int, ...] = (42, 123, 456)  # Multiple initializations
+    seeds: Tuple[int, ...] = (42, 123, 456)
     context_window: int = 100
-
-    # Baselines
     ma_window: int = 5
-
-    # Output
+    cache_dir: str = "data_cache"
     output_root: str = "experiments_canonical"
-    protocol_version: str = "1.0"
+    protocol_version: str = "1.1"
 
     def to_dict(self) -> Dict[str, Any]:
-        d = asdict(self)
-        # Convert tuples to lists for JSON
-        for k, v in d.items():
-            if isinstance(v, tuple):
-                d[k] = list(v)
-        return d
+        result = asdict(self)
+        for key, value in result.items():
+            if isinstance(value, tuple):
+                result[key] = list(value)
+        return result
 
-    @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "CanonicalConfig":
-        # Convert lists back to tuples
-        for k, v in d.items():
-            if isinstance(v, list):
-                d[k] = tuple(v)
-        return cls(**d)
-
-
-# ─── Data structures for canonical results ────────────────────────────────
 
 @dataclass
 class ModelResult:
-    """Result for a single model (baseline or HMM) on one asset/fold."""
+    """Serializable metrics for one baseline/HMM configuration."""
+
     asset: str
     fold: int
     model_name: str
-    model_family: str  # "baseline" or "hmm"
-    # Selection metadata (empty for baselines)
+    model_family: str
     k: Optional[int] = None
     seed: Optional[int] = None
-    selected_by: Optional[str] = None  # "val_ll", "val_aic", "val_bic"
-    # Metrics
+    selected_by: Optional[str] = None
     dpa: float = 0.0
     mae_return: float = 0.0
     rmse_return: float = 0.0
@@ -121,7 +105,6 @@ class ModelResult:
     log_likelihood_train: float = float("nan")
     log_likelihood_val: float = float("nan")
     log_likelihood_test: float = float("nan")
-    # HMM diagnostics
     converged: Optional[bool] = None
     iterations: Optional[int] = None
     n_parameters: Optional[int] = None
@@ -130,32 +113,27 @@ class ModelResult:
     runtime_sec: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
-        d = asdict(self)
-        # Replace NaN with None for JSON
-        for k, v in d.items():
-            if isinstance(v, float) and np.isnan(v):
-                d[k] = None
-        return d
+        result = asdict(self)
+        for key, value in result.items():
+            if isinstance(value, float) and np.isnan(value):
+                result[key] = None
+        return result
 
 
 @dataclass
 class FoldResult:
-    """All results for one asset/fold combination."""
     asset: str
     fold: int
     train_dates: Tuple[str, str]
     val_dates: Tuple[str, str]
     test_dates: Tuple[str, str]
-    baseline_results: List[ModelResult]
-    hmm_results_all_starts: List[ModelResult]  # All K×seed combinations
-    selected_hmm: Optional[ModelResult]  # The one chosen by validation
-    test_results: List[ModelResult]  # Baselines + selected HMM on test
+    hmm_results_all_starts: List[ModelResult]
+    selected_hmm: ModelResult
+    test_results: List[ModelResult]
 
-
-# ─── Canonical Runner ────────────────────────────────────────────────────
 
 class CanonicalRunner:
-    """Executes the canonical protocol and emits versioned artifacts."""
+    """Execute the fixed canonical protocol and emit versioned artifacts."""
 
     def __init__(self, config: CanonicalConfig):
         self.config = config
@@ -163,234 +141,148 @@ class CanonicalRunner:
         self.run_id = f"canonical_{self.timestamp}"
         self.output_dir = Path(config.output_root) / self.run_id
         self.output_dir.mkdir(parents=True, exist_ok=True)
-
-        # Manifest data
         self.manifest: Dict[str, Any] = {
             "protocol_version": config.protocol_version,
             "run_id": self.run_id,
             "timestamp": self.timestamp,
+            "git_commit": self._get_git_commit(),
             "config": config.to_dict(),
             "assets": list(config.assets),
             "folds_completed": [],
             "artifacts": {},
-            "git_commit": self._get_git_commit(),
+            "protocol_notes": [
+                "K and seed are selected using validation log-likelihood only.",
+                "The Test set is not scored before model selection is locked.",
+                "The locked HMM is trained on Train only; Validation may be used as past inference context at Test time.",
+                "Posterior uncertainty is diagnostic and does not replace the canonical hard-state forecast.",
+            ],
         }
 
-    def _get_git_commit(self) -> str:
+    @staticmethod
+    def _get_git_commit() -> str:
         try:
-            import subprocess
             result = subprocess.run(
                 ["git", "rev-parse", "HEAD"],
-                capture_output=True, text=True, cwd=Path(__file__).parent
+                capture_output=True,
+                text=True,
+                check=False,
             )
-            return result.stdout.strip()[:12]
+            return result.stdout.strip()[:12] or "unknown"
         except Exception:
             return "unknown"
 
     def run(self) -> List[FoldResult]:
-        """Execute the full canonical protocol for all assets."""
-        all_fold_results = []
-
+        all_results: List[FoldResult] = []
         for asset in self.config.assets:
-            print(f"\n{'='*60}")
+            print("\n" + "=" * 64)
             print(f"Processing {asset}")
-            print(f"{'='*60}")
-
+            print("=" * 64)
             try:
-                fold_result = self._process_asset(asset)
-                all_fold_results.append(fold_result)
-                self.manifest["folds_completed"].append({
-                    "asset": asset,
-                    "fold": 0,
-                    "status": "completed",
-                })
-            except Exception as e:
-                print(f"ERROR processing {asset}: {e}")
-                import traceback
-                traceback.print_exc()
-                self.manifest["folds_completed"].append({
-                    "asset": asset,
-                    "fold": 0,
-                    "status": "failed",
-                    "error": str(e),
-                })
+                fold = self._process_asset(asset)
+                all_results.append(fold)
+                self.manifest["folds_completed"].append(
+                    {"asset": asset, "fold": 0, "status": "completed"}
+                )
+            except Exception as exc:
+                print(f"ERROR processing {asset}: {exc}")
+                self.manifest["folds_completed"].append(
+                    {"asset": asset, "fold": 0, "status": "failed", "error": str(exc)}
+                )
 
-        # Write manifest
+        self._write_results_csv(all_results)
+        self._write_model_diagnostics_json(all_results)
+        # Manifest is deliberately written last so its artifact map is complete.
         self._write_manifest()
-        self._write_results_csv(all_fold_results)
-        self._write_model_diagnostics_json(all_fold_results)
 
-        print(f"\n{'='*60}")
-        print(f"Canonical run complete. Output: {self.output_dir}")
-        print(f"{'='*60}")
-
-        return all_fold_results
+        print("\n" + "=" * 64)
+        print(f"Canonical run complete: {self.output_dir}")
+        print("=" * 64)
+        return all_results
 
     def _process_asset(self, asset: str) -> FoldResult:
-        """Process a single asset through the full protocol."""
-        # 1. Load data
-        print(f"  Loading {asset} from {self.config.start_date} to {self.config.end_date}...")
-        raw_df = load_asset(asset, self.config.start_date, self.config.end_date)
-        raw_df = validate_data(raw_df)
-        print(f"    Raw shape: {raw_df.shape}")
-
-        # 2. Build features
-        df, price_col = build_features(raw_df)
-        print(f"    Feature shape: {df.shape}")
-
-        # 3. Target-safe Train/Validation/Test split
+        raw = load_asset(
+            asset,
+            self.config.start_date,
+            self.config.end_date,
+            cache_dir=self.config.cache_dir,
+        )
+        raw = validate_data(raw)
+        df, price_col = build_features(raw)
         splits = target_safe_train_validation_test_split(
             df,
             validation_size=self.config.validation_size,
             test_size=self.config.test_size,
         )
-        print(f"    Train: {len(splits.train)} ({splits.train.index.min().date()} to {splits.train.index.max().date()})")
-        print(f"    Val:   {len(splits.validation)} ({splits.validation.index.min().date()} to {splits.validation.index.max().date()})")
-        print(f"    Test:  {len(splits.test)} ({splits.test.index.min().date()} to {splits.test.index.max().date()})")
-
-        # 4. Scale features (fit on train only)
-        scaler = StandardScaler()
-        X_train = scaler.fit_transform(splits.train[list(self.config.feature_cols)].values)
-        X_val = scaler.transform(splits.validation[list(self.config.feature_cols)].values)
-        X_test = scaler.transform(splits.test[list(self.config.feature_cols)].values)
-
-        # 5. Run baselines on test set
-        print("  Running baselines...")
-        baseline_results = self._run_baselines(splits.train, splits.validation, splits.test)
-
-        # 6. Multi-start HMM fitting for each K
-        print("  Multi-start HMM fitting...")
-        hmm_all_starts = self._run_hmm_multi_start(
-            splits.train, splits.validation, splits.test,
-            X_train, X_val, X_test
+        print(
+            f"  Train {len(splits.train)} | Val {len(splits.validation)} | Test {len(splits.test)}"
         )
 
-        # 7. Select best HMM by validation log-likelihood
-        converged_starts = [r for r in hmm_all_starts if r.converged]
-        if not converged_starts:
+        feature_cols = list(self.config.feature_cols)
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(splits.train[feature_cols].to_numpy())
+        X_val = scaler.transform(splits.validation[feature_cols].to_numpy())
+        X_test = scaler.transform(splits.test[feature_cols].to_numpy())
+
+        starts = self._fit_candidates(asset, splits, X_train, X_val)
+        converged = [
+            result
+            for result in starts
+            if result.converged and np.isfinite(result.log_likelihood_val)
+        ]
+        if not converged:
             raise RuntimeError(f"No converged HMM fits for {asset}")
 
-        # Select by validation LL (could also use AIC/BIC on validation)
-        selected = max(converged_starts, key=lambda r: r.log_likelihood_val)
-        selected.selected_by = "val_ll"
-        print(f"    Selected: K={selected.k}, seed={selected.seed}, val_LL={selected.log_likelihood_val:.2f}")
-
-        # 8. Evaluate selected HMM + baselines on TEST (locked model)
-        print("  Evaluating on test set...")
-        test_results = self._evaluate_on_test(
-            splits.train, splits.test,
-            X_train, X_test,
-            baseline_results, selected
+        selected = max(converged, key=lambda result: result.log_likelihood_val)
+        selected.selected_by = "validation_log_likelihood"
+        print(
+            f"  Selected K={selected.k}, seed={selected.seed}, "
+            f"val LL={selected.log_likelihood_val:.2f}"
         )
 
-        # Build fold result
-        fold_result = FoldResult(
+        test_results, final_payload = self._evaluate_locked_model(
+            asset,
+            splits,
+            scaler,
+            X_train,
+            X_val,
+            X_test,
+            selected,
+        )
+
+        fold = FoldResult(
             asset=asset,
             fold=0,
             train_dates=(
-                str(splits.train.index.min().date()),
-                str(splits.train.index.max().date()),
+                splits.train.index.min().date().isoformat(),
+                splits.train.index.max().date().isoformat(),
             ),
             val_dates=(
-                str(splits.validation.index.min().date()),
-                str(splits.validation.index.max().date()),
+                splits.validation.index.min().date().isoformat(),
+                splits.validation.index.max().date().isoformat(),
             ),
             test_dates=(
-                str(splits.test.index.min().date()),
-                str(splits.test.index.max().date()),
+                splits.test.index.min().date().isoformat(),
+                splits.test.index.max().date().isoformat(),
             ),
-            baseline_results=baseline_results,
-            hmm_results_all_starts=hmm_all_starts,
+            hmm_results_all_starts=starts,
             selected_hmm=selected,
             test_results=test_results,
         )
+        self._save_asset_artifacts(asset, fold, splits, price_col, final_payload)
+        return fold
 
-        # Save per-asset artifacts
-        self._save_asset_artifacts(asset, fold_result, splits, price_col)
-
-        return fold_result
-
-    def _run_baselines(
+    def _fit_candidates(
         self,
-        train_df: pd.DataFrame,
-        val_df: pd.DataFrame,
-        test_df: pd.DataFrame,
-    ) -> List[ModelResult]:
-        """Run all baseline models. Returns results on validation for reference."""
-        results = []
-        train_mean = train_df["next_log_return"].mean()
-
-        # Naive - train mean return
-        start = time.time()
-        pred = np.full(len(test_df), train_mean)
-        res = evaluate_predictions("Naive - train mean", test_df, pred, time.time() - start)
-        results.append(ModelResult(
-            asset="", fold=0, model_name=res["model"], model_family="baseline",
-            dpa=res["DPA_direction_accuracy"], mae_return=res["MAE_return"],
-            rmse_return=res["RMSE_return"], mape_price_pct=res["MAPE_price_%"],
-            runtime_sec=res["runtime_sec"],
-        ))
-
-        # Naive - persistence
-        start = time.time()
-        pred = test_df["log_return"].values
-        res = evaluate_predictions("Naive - persistence", test_df, pred, time.time() - start)
-        results.append(ModelResult(
-            asset="", fold=0, model_name=res["model"], model_family="baseline",
-            dpa=res["DPA_direction_accuracy"], mae_return=res["MAE_return"],
-            rmse_return=res["RMSE_return"], mape_price_pct=res["MAPE_price_%"],
-            runtime_sec=res["runtime_sec"],
-        ))
-
-        # Moving Average
-        start = time.time()
-        full_df = pd.concat([train_df, val_df, test_df]).copy()
-        full_df["ma_pred"] = full_df["log_return"].rolling(self.config.ma_window).mean()
-        pred = full_df.loc[test_df.index, "ma_pred"].fillna(train_mean).values
-        res = evaluate_predictions(f"Moving Average {self.config.ma_window}", test_df, pred, time.time() - start)
-        results.append(ModelResult(
-            asset="", fold=0, model_name=res["model"], model_family="baseline",
-            dpa=res["DPA_direction_accuracy"], mae_return=res["MAE_return"],
-            rmse_return=res["RMSE_return"], mape_price_pct=res["MAPE_price_%"],
-            runtime_sec=res["runtime_sec"],
-        ))
-
-        # Discrete Markov Chain
-        start = time.time()
-        train_curr_dir = direction_labels(train_df["log_return"].values)
-        train_next = train_df["next_log_return"].values
-        exp_next = {}
-        for d in [0, 1]:
-            vals = train_next[train_curr_dir == d]
-            exp_next[d] = vals.mean() if len(vals) else train_mean
-        pred = np.array([exp_next[d] for d in direction_labels(test_df["log_return"].values)])
-        res = evaluate_predictions("Discrete Markov Chain", test_df, pred, time.time() - start)
-        results.append(ModelResult(
-            asset="", fold=0, model_name=res["model"], model_family="baseline",
-            dpa=res["DPA_direction_accuracy"], mae_return=res["MAE_return"],
-            rmse_return=res["RMSE_return"], mape_price_pct=res["MAPE_price_%"],
-            runtime_sec=res["runtime_sec"],
-        ))
-
-        return results
-
-    def _run_hmm_multi_start(
-        self,
-        train_df: pd.DataFrame,
-        val_df: pd.DataFrame,
-        test_df: pd.DataFrame,
+        asset: str,
+        splits: TargetSafeSplits,
         X_train: np.ndarray,
         X_val: np.ndarray,
-        X_test: np.ndarray,
     ) -> List[ModelResult]:
-        """Run HMM for all K × seed combinations. Evaluate on validation."""
-        results = []
-
+        """Fit all K x seed candidates without touching the Test set."""
+        results: List[ModelResult] = []
         for k in self.config.k_values:
             for seed in self.config.seeds:
-                print(f"    K={k}, seed={seed}...", end=" ", flush=True)
                 start = time.time()
-
                 try:
                     model, fit_time = train_gaussian_hmm(
                         X_train,
@@ -399,378 +291,401 @@ class CanonicalRunner:
                         n_iter=self.config.n_iter,
                         tol=self.config.tol,
                         random_state=seed,
-                        verbose=False,
                     )
-                    runtime = time.time() - start
-
-                    # Diagnostics
                     diag = gaussian_hmm_diagnostics(model, X_train)
-
-                    # Validation log-likelihood (for selection)
                     val_ll = float(model.score(X_val))
-                    train_ll = float(model.score(X_train))
-                    test_ll = float(model.score(X_test))
-
-                    # Past-only state decoding on validation
-                    train_states = model.predict(X_train)
-                    val_states = decode_past_only_states(
-                        model, X_train, X_val, self.config.context_window
-                    )
-
-                    # Validation predictions
-                    val_pred = hmm_next_return_predictions(
-                        model, train_df, train_states, val_states
-                    )
-                    val_res = evaluate_predictions(
-                        f"HMM K={k} seed={seed}", val_df, val_pred, runtime,
-                        train_ll, val_ll
-                    )
-
                     result = ModelResult(
-                        asset="", fold=0,
+                        asset=asset,
+                        fold=0,
                         model_name=f"Gaussian HMM K={k} seed={seed}",
                         model_family="hmm",
-                        k=k, seed=seed,
-                        dpa=val_res["DPA_direction_accuracy"],
-                        mae_return=val_res["MAE_return"],
-                        rmse_return=val_res["RMSE_return"],
-                        mape_price_pct=val_res["MAPE_price_%"],
-                        log_likelihood_train=train_ll,
+                        k=k,
+                        seed=seed,
+                        log_likelihood_train=float(diag["train_log_likelihood"]),
                         log_likelihood_val=val_ll,
-                        log_likelihood_test=test_ll,
-                        converged=diag["converged"],
-                        iterations=diag["iterations"],
-                        n_parameters=diag["n_parameters"],
-                        aic=diag["aic"],
-                        bic=diag["bic"],
-                        runtime_sec=runtime,
+                        # Test likelihood intentionally remains NaN until selection is locked.
+                        converged=bool(diag["converged"]),
+                        iterations=int(diag["iterations"]),
+                        n_parameters=int(diag["n_parameters"]),
+                        aic=float(diag["aic"]),
+                        bic=float(diag["bic"]),
+                        runtime_sec=float(fit_time),
                     )
                     results.append(result)
-                    status = "✓" if diag["converged"] else "✗"
-                    print(f"{status} val_LL={val_ll:.2f} converged={diag['converged']}")
-
-                except Exception as e:
-                    print(f"FAILED: {e}")
-                    # Record failed attempt
-                    results.append(ModelResult(
-                        asset="", fold=0,
-                        model_name=f"Gaussian HMM K={k} seed={seed}",
-                        model_family="hmm",
-                        k=k, seed=seed,
-                        runtime_sec=time.time() - start,
-                        converged=False,
-                    ))
-
+                    status = "OK" if result.converged else "NOT-CONVERGED"
+                    print(f"    K={k} seed={seed}: {status}, val LL={val_ll:.2f}")
+                except Exception as exc:
+                    print(f"    K={k} seed={seed}: FAILED ({exc})")
+                    results.append(
+                        ModelResult(
+                            asset=asset,
+                            fold=0,
+                            model_name=f"Gaussian HMM K={k} seed={seed}",
+                            model_family="hmm",
+                            k=k,
+                            seed=seed,
+                            converged=False,
+                            runtime_sec=float(time.time() - start),
+                        )
+                    )
         return results
 
-    def _evaluate_on_test(
+    def _baseline_predictions(
         self,
-        train_df: pd.DataFrame,
+        history_df: pd.DataFrame,
         test_df: pd.DataFrame,
+    ) -> Dict[str, np.ndarray]:
+        """Generate baselines from information available before each next-day target."""
+        history_mean = float(history_df["next_log_return"].mean())
+        predictions: Dict[str, np.ndarray] = {
+            "Naive - train mean": np.full(len(test_df), history_mean),
+            "Naive - persistence": test_df["log_return"].to_numpy(dtype=float),
+        }
+
+        full = pd.concat([history_df, test_df]).sort_index().copy()
+        full["ma_pred"] = full["log_return"].rolling(self.config.ma_window).mean()
+        predictions[f"Moving Average {self.config.ma_window}"] = (
+            full.loc[test_df.index, "ma_pred"].fillna(history_mean).to_numpy(dtype=float)
+        )
+
+        current_direction = direction_labels(history_df["log_return"].to_numpy())
+        next_returns = history_df["next_log_return"].to_numpy(dtype=float)
+        expected: Dict[int, float] = {}
+        for direction in (0, 1):
+            values = next_returns[current_direction == direction]
+            expected[direction] = float(values.mean()) if len(values) else history_mean
+        test_direction = direction_labels(test_df["log_return"].to_numpy())
+        predictions["Discrete Markov Chain"] = np.asarray(
+            [expected[int(direction)] for direction in test_direction], dtype=float
+        )
+        return predictions
+
+    def _evaluate_locked_model(
+        self,
+        asset: str,
+        splits: TargetSafeSplits,
+        scaler: StandardScaler,
         X_train: np.ndarray,
+        X_val: np.ndarray,
         X_test: np.ndarray,
-        baseline_results: List[ModelResult],
-        selected_hmm: ModelResult,
-    ) -> List[ModelResult]:
-        """Evaluate baselines + selected HMM on the held-out test set."""
-        results = []
+        selected: ModelResult,
+    ) -> Tuple[List[ModelResult], Dict[str, Any]]:
+        """Evaluate baselines and the selected HMM on Test after selection is locked."""
+        history_df = pd.concat([splits.train, splits.validation]).sort_index().copy()
+        results: List[ModelResult] = []
 
-        # Re-run baselines on test (they're fast, ensures exact same test set)
-        train_mean = train_df["next_log_return"].mean()
+        for name, prediction in self._baseline_predictions(history_df, splits.test).items():
+            start = time.time()
+            evaluation = evaluate_predictions(name, splits.test, prediction)
+            results.append(
+                ModelResult(
+                    asset=asset,
+                    fold=0,
+                    model_name=name,
+                    model_family="baseline",
+                    dpa=float(evaluation["DPA_direction_accuracy"]),
+                    mae_return=float(evaluation["MAE_return"]),
+                    rmse_return=float(evaluation["RMSE_return"]),
+                    mape_price_pct=float(evaluation["MAPE_price_%"]),
+                    runtime_sec=float(time.time() - start),
+                )
+            )
 
-        # Naive train mean
-        start = time.time()
-        pred = np.full(len(test_df), train_mean)
-        res = evaluate_predictions("Naive - train mean", test_df, pred, time.time() - start)
-        results.append(ModelResult(
-            asset="", fold=0, model_name=res["model"], model_family="baseline",
-            dpa=res["DPA_direction_accuracy"], mae_return=res["MAE_return"],
-            rmse_return=res["RMSE_return"], mape_price_pct=res["MAPE_price_%"],
-            runtime_sec=res["runtime_sec"],
-        ))
-
-        # Persistence
-        start = time.time()
-        pred = test_df["log_return"].values
-        res = evaluate_predictions("Naive - persistence", test_df, pred, time.time() - start)
-        results.append(ModelResult(
-            asset="", fold=0, model_name=res["model"], model_family="baseline",
-            dpa=res["DPA_direction_accuracy"], mae_return=res["MAE_return"],
-            rmse_return=res["RMSE_return"], mape_price_pct=res["MAPE_price_%"],
-            runtime_sec=res["runtime_sec"],
-        ))
-
-        # Moving Average
-        start = time.time()
-        full_df = pd.concat([train_df, test_df]).copy()
-        full_df["ma_pred"] = full_df["log_return"].rolling(self.config.ma_window).mean()
-        pred = full_df.loc[test_df.index, "ma_pred"].fillna(train_mean).values
-        res = evaluate_predictions(f"Moving Average {self.config.ma_window}", test_df, pred, time.time() - start)
-        results.append(ModelResult(
-            asset="", fold=0, model_name=res["model"], model_family="baseline",
-            dpa=res["DPA_direction_accuracy"], mae_return=res["MAE_return"],
-            rmse_return=res["RMSE_return"], mape_price_pct=res["MAPE_price_%"],
-            runtime_sec=res["runtime_sec"],
-        ))
-
-        # Discrete Markov Chain
-        start = time.time()
-        train_curr_dir = direction_labels(train_df["log_return"].values)
-        train_next = train_df["next_log_return"].values
-        exp_next = {}
-        for d in [0, 1]:
-            vals = train_next[train_curr_dir == d]
-            exp_next[d] = vals.mean() if len(vals) else train_mean
-        pred = np.array([exp_next[d] for d in direction_labels(test_df["log_return"].values)])
-        res = evaluate_predictions("Discrete Markov Chain", test_df, pred, time.time() - start)
-        results.append(ModelResult(
-            asset="", fold=0, model_name=res["model"], model_family="baseline",
-            dpa=res["DPA_direction_accuracy"], mae_return=res["MAE_return"],
-            rmse_return=res["RMSE_return"], mape_price_pct=res["MAPE_price_%"],
-            runtime_sec=res["runtime_sec"],
-        ))
-
-        # Selected HMM on test (re-train with same seed on train, evaluate on test)
-        print(f"    Evaluating selected HMM (K={selected_hmm.k}, seed={selected_hmm.seed}) on test...")
         model, fit_time = train_gaussian_hmm(
             X_train,
-            n_states=selected_hmm.k,
+            n_states=int(selected.k),
             covariance_type=self.config.covariance_type,
             n_iter=self.config.n_iter,
             tol=self.config.tol,
-            random_state=selected_hmm.seed,
-            verbose=False,
+            random_state=int(selected.seed),
         )
+        diag = gaussian_hmm_diagnostics(model, X_train)
         train_states = model.predict(X_train)
-        test_states = decode_past_only_states(model, X_train, X_test, self.config.context_window)
-        test_pred = hmm_next_return_predictions(model, train_df, train_states, test_states)
+
+        # Validation is past by the time Test begins. It is therefore allowed as
+        # inference context, while the HMM parameters and state-return means remain
+        # fitted on Train only.
+        X_history_context = np.vstack([X_train, X_val])
+        test_states = decode_past_only_states(
+            model, X_history_context, X_test, self.config.context_window
+        )
+        test_posteriors = decode_past_only_posteriors(
+            model, X_history_context, X_test, self.config.context_window
+        )
+        entropy = posterior_entropy(test_posteriors, normalize=True)
+        confidence = posterior_confidence(test_posteriors)
+
+        prediction = hmm_next_return_predictions(
+            model, splits.train, train_states, test_states
+        )
         test_ll = float(model.score(X_test))
-        train_ll = float(model.score(X_train))
-        test_res = evaluate_predictions(
-            f"Gaussian HMM K={selected_hmm.k} (selected)", test_df, test_pred,
-            fit_time, train_ll, test_ll
+        evaluation = evaluate_predictions(
+            f"Gaussian HMM K={selected.k} (selected)",
+            splits.test,
+            prediction,
+            fit_time,
+            float(diag["train_log_likelihood"]),
+            test_ll,
+        )
+        results.append(
+            ModelResult(
+                asset=asset,
+                fold=0,
+                model_name=evaluation["model"],
+                model_family="hmm",
+                k=selected.k,
+                seed=selected.seed,
+                selected_by=selected.selected_by,
+                dpa=float(evaluation["DPA_direction_accuracy"]),
+                mae_return=float(evaluation["MAE_return"]),
+                rmse_return=float(evaluation["RMSE_return"]),
+                mape_price_pct=float(evaluation["MAPE_price_%"]),
+                log_likelihood_train=float(diag["train_log_likelihood"]),
+                log_likelihood_val=selected.log_likelihood_val,
+                log_likelihood_test=test_ll,
+                converged=bool(diag["converged"]),
+                iterations=int(diag["iterations"]),
+                n_parameters=int(diag["n_parameters"]),
+                aic=float(diag["aic"]),
+                bic=float(diag["bic"]),
+                runtime_sec=float(fit_time),
+            )
         )
 
-        results.append(ModelResult(
-            asset="", fold=0,
-            model_name=test_res["model"],
-            model_family="hmm",
-            k=selected_hmm.k,
-            seed=selected_hmm.seed,
-            selected_by=selected_hmm.selected_by,
-            dpa=test_res["DPA_direction_accuracy"],
-            mae_return=test_res["MAE_return"],
-            rmse_return=test_res["RMSE_return"],
-            mape_price_pct=test_res["MAPE_price_%"],
-            log_likelihood_train=train_ll,
-            log_likelihood_test=test_ll,
-            converged=True,
-            iterations=selected_hmm.iterations,
-            n_parameters=selected_hmm.n_parameters,
-            aic=selected_hmm.aic,
-            bic=selected_hmm.bic,
-            runtime_sec=test_res["runtime_sec"],
-        ))
-
-        return results
+        payload = {
+            "model": model,
+            "train_states": train_states,
+            "test_states": test_states,
+            "test_posteriors": test_posteriors,
+            "test_entropy": entropy,
+            "test_confidence": confidence,
+        }
+        return results, payload
 
     def _save_asset_artifacts(
         self,
         asset: str,
-        fold_result: FoldResult,
+        fold: FoldResult,
         splits: TargetSafeSplits,
         price_col: str,
+        payload: Dict[str, Any],
     ) -> None:
-        """Save per-asset plots and tables."""
         asset_dir = self.output_dir / asset
-        asset_dir.mkdir(exist_ok=True)
+        asset_dir.mkdir(parents=True, exist_ok=True)
+        model = payload["model"]
+        k = int(fold.selected_hmm.k)
 
-        # State summary for selected HMM
-        if fold_result.selected_hmm:
-            # Re-train selected model on train to get states
+        train_posteriors = model.predict_proba(
+            StandardScaler()
+            .fit(splits.train[list(self.config.feature_cols)].to_numpy())
+            .transform(splits.train[list(self.config.feature_cols)].to_numpy())
+        )
+        # The train state summary remains based on the locked model's hard state
+        # sequence; posterior fields are diagnostic additions.
+        train_entropy = posterior_entropy(train_posteriors, normalize=True)
+        state_summary = summarize_states(
+            splits.train,
+            payload["train_states"],
+            posterior_probabilities=train_posteriors,
+            posterior_entropy_values=train_entropy,
+        )
+        state_table_path = asset_dir / f"state_table_K{k}.csv"
+        state_summary.to_csv(state_table_path, index=False)
+
+        transmat = pd.DataFrame(
+            model.transmat_,
+            index=[f"from_state_{i}" for i in range(k)],
+            columns=[f"to_state_{i}" for i in range(k)],
+        )
+        trans_path = asset_dir / f"transition_matrix_K{k}.csv"
+        transmat.to_csv(trans_path)
+
+        from src.analysis import analyze_transitions, plot_state_characteristics, plot_transition_heatmap
+
+        transition_analysis = analyze_transitions(
+            model.transmat_, [f"State {i}" for i in range(k)]
+        )
+        serializable_analysis = {
+            "n_states": transition_analysis["n_states"],
+            "state_names": transition_analysis["state_names"],
+            "average_diagonal_probability": float(
+                transition_analysis["average_diagonal_probability"]
+            ),
+            "average_row_entropy": float(transition_analysis["average_row_entropy"]),
+            "stationary_distribution": np.asarray(
+                transition_analysis["stationary_distribution"]
+            ).tolist(),
+            "mean_recurrence_time": np.asarray(
+                transition_analysis["mean_recurrence_time"]
+            ).tolist(),
+            "spectral_gap": float(transition_analysis["spectral_gap"]),
+            "eigenvalues": [
+                {"real": float(np.real(value)), "imag": float(np.imag(value))}
+                for value in transition_analysis["eigenvalues"]
+            ],
+        }
+        analysis_path = asset_dir / f"transition_analysis_K{k}.json"
+        with analysis_path.open("w", encoding="utf-8") as handle:
+            json.dump(serializable_analysis, handle, indent=2)
+
+        posterior_daily = splits.test[
+            ["log_return", "rolling_volatility_20", "daily_range", "volume_change", "current_close"]
+        ].copy()
+        posterior_daily["state_viterbi_past_only"] = payload["test_states"]
+        posterior_daily["posterior_state_argmax"] = np.argmax(
+            payload["test_posteriors"], axis=1
+        )
+        posterior_daily["posterior_confidence"] = payload["test_confidence"]
+        posterior_daily["posterior_entropy"] = payload["test_entropy"]
+        for state in range(k):
+            posterior_daily[f"p_state_{state}"] = payload["test_posteriors"][:, state]
+        posterior_path = asset_dir / f"posterior_test_K{k}.csv"
+        posterior_daily.to_csv(posterior_path)
+
+        try:
+            import matplotlib.pyplot as plt
+
+            # For visualization only, validation/test states are decoded using past
+            # prefixes. No future test observation influences an earlier point.
             feature_cols = list(self.config.feature_cols)
-            from sklearn.preprocessing import StandardScaler
             scaler = StandardScaler()
-            X_train = scaler.fit_transform(splits.train[feature_cols].values)
-
-            model, _ = train_gaussian_hmm(
-                X_train,
-                n_states=fold_result.selected_hmm.k,
-                covariance_type=self.config.covariance_type,
-                n_iter=self.config.n_iter,
-                tol=self.config.tol,
-                random_state=fold_result.selected_hmm.seed,
-                verbose=False,
+            X_train = scaler.fit_transform(splits.train[feature_cols].to_numpy())
+            X_val = scaler.transform(splits.validation[feature_cols].to_numpy())
+            X_test = scaler.transform(splits.test[feature_cols].to_numpy())
+            val_states = decode_past_only_states(
+                model, X_train, X_val, self.config.context_window
             )
-            train_states = model.predict(X_train)
-            state_summary = summarize_states(splits.train, train_states)
-            state_summary.to_csv(asset_dir / f"state_table_K{fold_result.selected_hmm.k}.csv", index=False)
+            test_states = decode_past_only_states(
+                model, np.vstack([X_train, X_val]), X_test, self.config.context_window
+            )
+            plot_df = pd.concat([splits.train, splits.validation, splits.test]).copy()
+            plot_df["state"] = np.concatenate(
+                [payload["train_states"], val_states, test_states]
+            )
 
-            # Transition matrix
-            transmat_df = pd.DataFrame(
+            fig, ax = plt.subplots(figsize=(13, 5))
+            scatter = ax.scatter(
+                plot_df.index, plot_df[price_col], c=plot_df["state"], s=8
+            )
+            ax.set_title(f"{asset} price colored by HMM states (K={k})")
+            ax.set_xlabel("Date")
+            ax.set_ylabel("Price")
+            ax.grid(alpha=0.3)
+            fig.colorbar(scatter, ax=ax, label="Hidden state")
+            fig.tight_layout()
+            price_plot = asset_dir / f"{asset}_price_states_K{k}.png"
+            fig.savefig(price_plot, dpi=150, bbox_inches="tight")
+            plt.close(fig)
+
+            fig, ax = plt.subplots(figsize=(13, 4))
+            scatter = ax.scatter(
+                plot_df.index, plot_df["log_return"], c=plot_df["state"], s=8
+            )
+            ax.set_title(f"{asset} log returns colored by HMM states (K={k})")
+            ax.set_xlabel("Date")
+            ax.set_ylabel("Log return")
+            ax.grid(alpha=0.3)
+            fig.colorbar(scatter, ax=ax, label="Hidden state")
+            fig.tight_layout()
+            return_plot = asset_dir / f"{asset}_returns_states_K{k}.png"
+            fig.savefig(return_plot, dpi=150, bbox_inches="tight")
+            plt.close(fig)
+
+            transition_plot = asset_dir / f"{asset}_transition_matrix_K{k}.png"
+            fig = plot_transition_heatmap(
                 model.transmat_,
-                index=[f"from_state_{i}" for i in range(fold_result.selected_hmm.k)],
-                columns=[f"to_state_{i}" for i in range(fold_result.selected_hmm.k)],
+                [f"State {i}" for i in range(k)],
+                title=f"Transition Matrix - {asset} HMM K={k}",
+                save_path=str(transition_plot),
             )
-            transmat_df.to_csv(asset_dir / f"transition_matrix_K{fold_result.selected_hmm.k}.csv")
+            plt.close(fig)
 
-            # Transition analysis
-            from src.analysis import analyze_transitions, plot_transition_heatmap, plot_state_characteristics
-            state_names = [f"State {i}" for i in range(fold_result.selected_hmm.k)]
-            analysis = analyze_transitions(model.transmat_, state_names)
+            state_plot = asset_dir / f"{asset}_state_characteristics_K{k}.png"
+            fig = plot_state_characteristics(
+                state_summary,
+                save_path=str(state_plot),
+            )
+            plt.close(fig)
+        except Exception as exc:
+            print(f"  Plot warning for {asset}: {exc}")
 
-            # Save analysis as JSON (convert numpy)
-            def convert(obj):
-                if isinstance(obj, np.ndarray):
-                    if obj.dtype.kind == 'c':
-                        return [{"real": x.real, "imag": x.imag} for x in obj]
-                    return obj.tolist()
-                elif isinstance(obj, (np.floating, np.integer)):
-                    return obj.item()
-                return obj
+        self.manifest["artifacts"].setdefault("asset_files", {})[asset] = {
+            "test_results": f"{asset}/test_results.csv",
+            "state_table": str(state_table_path.relative_to(self.output_dir)),
+            "transition_matrix": str(trans_path.relative_to(self.output_dir)),
+            "transition_analysis": str(analysis_path.relative_to(self.output_dir)),
+            "posterior_test": str(posterior_path.relative_to(self.output_dir)),
+        }
 
-            analysis_serializable = {
-                "n_states": analysis["n_states"],
-                "state_names": analysis["state_names"],
-                "average_diagonal_probability": float(analysis["average_diagonal_probability"]),
-                "average_row_entropy": float(analysis["average_row_entropy"]),
-                "stationary_distribution": convert(analysis["stationary_distribution"]),
-                "mean_recurrence_time": convert(analysis["mean_recurrence_time"]),
-                "spectral_gap": float(analysis["spectral_gap"]),
-                "eigenvalues": convert(analysis["eigenvalues"]),
-            }
-            with open(asset_dir / f"transition_analysis_K{fold_result.selected_hmm.k}.json", "w") as f:
-                json.dump(analysis_serializable, f, indent=2)
-
-            # Plots
-            try:
-                import matplotlib.pyplot as plt
-
-                # Combined train+test states for plotting
-                X_test = scaler.transform(splits.test[feature_cols].values)
-                test_states = decode_past_only_states(model, X_train, X_test, self.config.context_window)
-
-                plot_df = pd.concat([splits.train, splits.test]).copy()
-                plot_df["state"] = np.concatenate([train_states, test_states])
-
-                # Price colored by states
-                plt.figure(figsize=(13, 5))
-                sc = plt.scatter(plot_df.index, plot_df[price_col], c=plot_df["state"], s=8)
-                plt.title(f"{asset} price colored by HMM states (K={fold_result.selected_hmm.k})")
-                plt.xlabel("Date"); plt.ylabel("Price")
-                plt.grid(True, alpha=0.3); plt.colorbar(sc, label="Hidden state")
-                plt.tight_layout()
-                plt.savefig(asset_dir / f"{asset}_price_states_K{fold_result.selected_hmm.k}.png", dpi=150, bbox_inches='tight')
-                plt.close()
-
-                # Returns colored by states
-                plt.figure(figsize=(13, 4))
-                sc = plt.scatter(plot_df.index, plot_df["log_return"], c=plot_df["state"], s=8)
-                plt.title(f"{asset} log returns colored by HMM states (K={fold_result.selected_hmm.k})")
-                plt.xlabel("Date"); plt.ylabel("Log return")
-                plt.grid(True, alpha=0.3); plt.colorbar(sc, label="Hidden state")
-                plt.tight_layout()
-                plt.savefig(asset_dir / f"{asset}_returns_states_K{fold_result.selected_hmm.k}.png", dpi=150, bbox_inches='tight')
-                plt.close()
-
-                # Transition heatmap
-                fig = plot_transition_heatmap(
-                    model.transmat_, state_names,
-                    title=f"Transition Matrix - {asset} HMM K={fold_result.selected_hmm.k}",
-                    save_path=str(asset_dir / f"{asset}_transition_matrix_K{fold_result.selected_hmm.k}.png")
-                )
-                plt.close(fig)
-
-                # State characteristics
-                fig = plot_state_characteristics(
-                    state_summary,
-                    save_path=str(asset_dir / f"{asset}_state_characteristics_K{fold_result.selected_hmm.k}.png")
-                )
-                plt.close(fig)
-
-            except Exception as e:
-                print(f"    Warning: Plot generation failed for {asset}: {e}")
-
-    def _write_manifest(self) -> None:
-        """Write the canonical manifest."""
-        manifest_path = self.output_dir / "manifest.json"
-        with open(manifest_path, "w") as f:
-            json.dump(self.manifest, f, indent=2)
-        self.manifest["artifacts"]["manifest"] = "manifest.json"
-
-    def _write_results_csv(self, all_fold_results: List[FoldResult]) -> None:
-        """Write consolidated results CSV."""
-        rows = []
-        for fr in all_fold_results:
-            for res in fr.test_results:
-                row = res.to_dict()
-                row["asset"] = fr.asset
-                row["fold"] = fr.fold
+    def _write_results_csv(self, folds: List[FoldResult]) -> None:
+        rows: List[Dict[str, Any]] = []
+        for fold in folds:
+            asset_dir = self.output_dir / fold.asset
+            asset_dir.mkdir(parents=True, exist_ok=True)
+            asset_rows = []
+            for result in fold.test_results:
+                row = result.to_dict()
+                row["asset"] = fold.asset
+                row["fold"] = fold.fold
                 rows.append(row)
+                asset_rows.append(row)
+            pd.DataFrame(asset_rows).to_csv(asset_dir / "test_results.csv", index=False)
 
-        df = pd.DataFrame(rows)
-        csv_path = self.output_dir / "results.csv"
-        df.to_csv(csv_path, index=False)
+        path = self.output_dir / "results.csv"
+        pd.DataFrame(rows).to_csv(path, index=False)
         self.manifest["artifacts"]["results_csv"] = "results.csv"
 
-        # Also write per-asset test results
-        for fr in all_fold_results:
-            asset_rows = [r.to_dict() for r in fr.test_results]
-            asset_df = pd.DataFrame(asset_rows)
-            asset_df.to_csv(self.output_dir / fr.asset / "test_results.csv", index=False)
-
-    def _write_model_diagnostics_json(self, all_fold_results: List[FoldResult]) -> None:
-        """Write complete HMM diagnostics for all starts."""
-        diag = {}
-        for fr in all_fold_results:
-            asset_diag = {}
-            for res in fr.hmm_results_all_starts:
-                key = f"K={res.k}_seed={res.seed}"
-                asset_diag[key] = {
-                    "k": res.k,
-                    "seed": res.seed,
-                    "converged": res.converged,
-                    "iterations": res.iterations,
-                    "train_log_likelihood": res.log_likelihood_train,
-                    "val_log_likelihood": res.log_likelihood_val,
-                    "test_log_likelihood": res.log_likelihood_test,
-                    "n_parameters": res.n_parameters,
-                    "aic": res.aic,
-                    "bic": res.bic,
-                    "dpa_val": res.dpa,
-                    "runtime_sec": res.runtime_sec,
+    def _write_model_diagnostics_json(self, folds: List[FoldResult]) -> None:
+        payload: Dict[str, Any] = {}
+        for fold in folds:
+            asset_payload: Dict[str, Any] = {}
+            for result in fold.hmm_results_all_starts:
+                key = f"K={result.k}_seed={result.seed}"
+                asset_payload[key] = {
+                    "k": result.k,
+                    "seed": result.seed,
+                    "converged": result.converged,
+                    "iterations": result.iterations,
+                    "train_log_likelihood": result.log_likelihood_train,
+                    "validation_log_likelihood": result.log_likelihood_val,
+                    # There is intentionally no pre-selection Test likelihood here.
+                    "n_parameters": result.n_parameters,
+                    "aic": result.aic,
+                    "bic": result.bic,
+                    "runtime_sec": result.runtime_sec,
                 }
-            if fr.selected_hmm:
-                asset_diag["selected"] = {
-                    "k": fr.selected_hmm.k,
-                    "seed": fr.selected_hmm.seed,
-                    "selected_by": fr.selected_hmm.selected_by,
-                }
-            diag[fr.asset] = asset_diag
+            asset_payload["selected"] = {
+                "k": fold.selected_hmm.k,
+                "seed": fold.selected_hmm.seed,
+                "selected_by": fold.selected_hmm.selected_by,
+            }
+            payload[fold.asset] = asset_payload
 
-        diag_path = self.output_dir / "model_diagnostics.json"
-        with open(diag_path, "w") as f:
-            json.dump(diag, f, indent=2)
+        path = self.output_dir / "model_diagnostics.json"
+        with path.open("w", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2)
         self.manifest["artifacts"]["model_diagnostics"] = "model_diagnostics.json"
 
+    def _write_manifest(self) -> None:
+        self.manifest["artifacts"]["manifest"] = "manifest.json"
+        path = self.output_dir / "manifest.json"
+        with path.open("w", encoding="utf-8") as handle:
+            json.dump(self.manifest, handle, indent=2)
 
-# ─── Entry point ──────────────────────────────────────────────────────────
 
-def main():
-    """Run the canonical protocol with default configuration."""
-    config = CanonicalConfig()
-    runner = CanonicalRunner(config)
+def main() -> None:
+    runner = CanonicalRunner(CanonicalConfig())
     results = runner.run()
-
-    # Print summary
-    print("\n" + "="*60)
-    print("CANONICAL RUN SUMMARY")
-    print("="*60)
-    for fr in results:
-        print(f"\n{fr.asset}:")
-        for tr in fr.test_results:
-            sel = " ← SELECTED" if tr.model_family == "hmm" and tr.k == fr.selected_hmm.k else ""
-            print(f"  {tr.model_name:40s} DPA={tr.dpa:.4f} MAE={tr.mae_return:.6f}{sel}")
+    print("\nCANONICAL RUN SUMMARY")
+    print("=" * 64)
+    for fold in results:
+        print(f"\n{fold.asset}:")
+        for result in fold.test_results:
+            selected = " <- SELECTED" if result.model_family == "hmm" else ""
+            print(
+                f"  {result.model_name:40s} "
+                f"DPA={result.dpa:.4f} MAE={result.mae_return:.6f}{selected}"
+            )
 
 
 if __name__ == "__main__":
