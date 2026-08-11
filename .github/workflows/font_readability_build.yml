@@ -1,0 +1,75 @@
+name: Final font readability build
+
+on:
+  push:
+    branches:
+      - final/font-readable
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install XeLaTeX and fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            texlive-xetex texlive-latex-extra texlive-fonts-recommended \
+            texlive-lang-other fonts-noto-core fonts-dejavu-core poppler-utils
+
+      - name: Apply font-only patch
+        run: python patch_font_readability.py
+
+      - name: Compile report
+        run: |
+          set -euo pipefail
+          cd reports
+          rm -f report.aux report.bbl report.blg report.log report.out report.toc
+          xelatex -interaction=nonstopmode -halt-on-error report.tex
+          bibtex report
+          xelatex -interaction=nonstopmode -halt-on-error report.tex
+          xelatex -interaction=nonstopmode -halt-on-error report.tex
+          cd ..
+          pdfinfo reports/report.pdf | grep '^Pages:'
+
+      - name: Update submission package
+        run: |
+          set -euo pipefail
+          cp reports/report.pdf submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf
+          rm -f submission/HMM_Market_Regimes_Submission_Matan_Eshel_203502802.zip
+          zip -j submission/HMM_Market_Regimes_Submission_Matan_Eshel_203502802.zip \
+            submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf \
+            submission/HMM_Market_Regimes_Project_Matan_Eshel_203502802.ipynb \
+            submission/README_SUBMISSION.md
+          cmp reports/report.pdf submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf
+
+      - name: Render PDF for QA
+        run: |
+          mkdir -p qa_font_renders
+          pdftoppm -png -r 150 reports/report.pdf qa_font_renders/page
+
+      - name: Upload QA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: font-readable-report
+          path: |
+            reports/report.pdf
+            qa_font_renders/*.png
+
+      - name: Commit font-only build
+        run: |
+          set -euo pipefail
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add reports/report.tex reports/report.pdf \
+            submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf \
+            submission/HMM_Market_Regimes_Submission_Matan_Eshel_203502802.zip
+          git commit -m "Use more readable Noto Hebrew font in final report"
+          git push origin HEAD:final/font-readable
