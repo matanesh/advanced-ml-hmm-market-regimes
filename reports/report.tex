@@ -101,13 +101,15 @@
 \fancyfoot[C]{\sffamily\small\color{mutedgray}\thepage}
 \renewcommand{\headrulewidth}{0.35pt}
 \renewcommand{\headrule}{\hbox to\headwidth{\color{linegray}\leaders\hrule height \headrulewidth\hfill}}
-\setlength{\headheight}{15pt}
+\setlength{\headheight}{17pt}
 
 \newcommand{\tech}[1]{\LR{#1}}
 \newcommand{\asset}[1]{\LR{#1}}
 \newcommand{\pct}[1]{\LR{#1\%}}
 \newcommand{\datecode}[1]{\mbox{\textenglish{#1}}}
-\newcommand{\code}[1]{\mbox{\textenglish{\texttt{\detokenize{#1}}}}}
+% Long run IDs and paths should be allowed to break at punctuation. \nolinkurl
+% keeps a monospaced code appearance while avoiding wide unbreakable boxes.
+\newcommand{\code}[1]{\LR{\nolinkurl{#1}}}
 \newcolumntype{Y}{>{\RaggedLeft\arraybackslash}X}
 \newcolumntype{L}{>{\RaggedRight\arraybackslash}X}
 \newcolumntype{C}{>{\centering\arraybackslash}X}
