@@ -70,15 +70,22 @@ The extended experiment adds:
 
 Posterior entropy around hard state switches is treated as an **internal ambiguity/confidence diagnostic**, not as independent external validation, because the hard switch itself is derived from the same posterior distribution.
 
-## Supervised ML baselines
+## Baselines
 
-The exact same feature set and chronological partitions are used for:
+The HMM is compared with four transparent simple baselines:
+
+- Naive train mean;
+- Naive persistence;
+- Moving Average 5;
+- Discrete Markov Chain.
+
+The exact same feature set and chronological partitions are also used for three Supervised ML baselines:
 
 - Logistic Regression;
 - Random Forest Classifier;
 - HistGradientBoostingClassifier.
 
-These baselines use pre-specified hyperparameters and are not tuned on Test. In addition to directional accuracy, their evaluation includes balanced accuracy, ROC-AUC, log loss and Brier score.
+The supervised baselines use pre-specified hyperparameters and are not tuned on Test. In addition to directional accuracy, their evaluation includes balanced accuracy, ROC-AUC, log loss and Brier score. The numeric-return methods also retain MAE, RMSE and price MAPE.
 
 ## Main empirical result
 
@@ -88,12 +95,15 @@ Mean directional prediction accuracy across the nine assets is approximately:
 |---|---:|
 | Naive - train mean | 54.54% |
 | Logistic Regression | 54.14% |
+| Discrete Markov Chain | 53.90% |
 | Random Forest | 53.27% |
 | Gaussian HMM - soft posterior | 53.06% |
 | HistGradientBoosting | 52.49% |
 | Gaussian HMM - hard state | 52.06% |
+| Naive - persistence | 50.45% |
+| Moving Average 5 | 50.27% |
 
-No model demonstrates a stable universal forecasting advantage.
+No model demonstrates a stable universal forecasting advantage. In particular, the simple Discrete Markov Chain ranks above both HMM variants on mean DPA, reinforcing the decision not to claim forecasting superiority.
 
 The stronger HMM findings concern regime structure. For SPY, the selected `K=4` model produces states with materially different return, volatility, daily range, drawdown and dwell-time characteristics. Its state partition is highly stable across seeds (mean pairwise ARI ≈ 0.995). VIX separates several inferred states despite not being a feature, and cross-asset correlations change with the SPY hidden state. These latter associations are reported descriptively; the smaller SPY states contain relatively few Test observations and no significance or causal claim is made.
 
@@ -122,7 +132,7 @@ python -m pip install -r requirements.txt
 
 ## Build the final notebook
 
-The notebook is deterministically generated from the verified artifacts and then receives a small wording-only final academic-review patch:
+The notebook is deterministically generated from the verified artifacts and then receives a small final academic-review patch:
 
 ```bash
 python build_final_notebook.py
@@ -134,7 +144,7 @@ jupyter nbconvert --to notebook --execute \
   --ExecutePreprocessor.kernel_name=python3
 ```
 
-The patch changes only explanatory Markdown; it does not modify numerical results, code outputs or experimental artifacts. The notebook execution itself does not need to download market data or retrain the expensive experiments.
+The patch corrects final explanatory wording and adds compact completeness tables for the already-verified K comparison, simple baselines and numeric forecast metrics. It does **not** retrain models, alter experiment outputs, select a different model, or change result artifacts. The notebook execution itself does not need to download market data or rerun the expensive experiments.
 
 ## Re-run the experiments
 
