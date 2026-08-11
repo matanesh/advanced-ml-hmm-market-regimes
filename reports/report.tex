@@ -23,26 +23,22 @@
 \setdefaultlanguage{hebrew}
 \setotherlanguage{english}
 
-% Academic body typeface with robust fallbacks. Hebrew body text is serif for
-% long-form readability; headings remain sans-serif for a clean hierarchy.
-\IfFontExistsTF{Libertinus Serif}{
-  \setmainfont{Libertinus Serif}
-  \newfontfamily\englishfont{Libertinus Serif}[Renderer=HarfBuzz]
+% Prefer a restrained serif body similar to a traditional academic paper.
+% FreeSerif/FreeSans cover both Hebrew and Latin, which keeps mixed-language
+% sentences stable. The previous DejaVu setup remains the portable fallback.
+\IfFontExistsTF{FreeSerif}{
+  \setmainfont{FreeSerif}
+  \setsansfont{FreeSans}
+  \newfontfamily\hebrewfont{FreeSerif}[Script=Hebrew,Renderer=HarfBuzz]
+  \newfontfamily\hebrewfontsf{FreeSans}[Script=Hebrew,Renderer=HarfBuzz]
+  \newfontfamily\englishfont{FreeSerif}[Renderer=HarfBuzz]
 }{
-  \setmainfont{DejaVu Serif}
-  \newfontfamily\englishfont{DejaVu Serif}[Renderer=HarfBuzz]
-}
-\IfFontExistsTF{Noto Serif Hebrew}{
-  \newfontfamily\hebrewfont{Noto Serif Hebrew}[Script=Hebrew,Renderer=HarfBuzz]
-}{
+  \setmainfont{DejaVu Sans}
+  \setsansfont{DejaVu Sans}
   \newfontfamily\hebrewfont{DejaVu Sans}[Script=Hebrew,Renderer=HarfBuzz]
-}
-\IfFontExistsTF{Noto Sans Hebrew}{
-  \newfontfamily\hebrewfontsf{Noto Sans Hebrew}[Script=Hebrew,Renderer=HarfBuzz]
-}{
   \newfontfamily\hebrewfontsf{DejaVu Sans}[Script=Hebrew,Renderer=HarfBuzz]
+  \newfontfamily\englishfont{DejaVu Sans}[Renderer=HarfBuzz]
 }
-\setsansfont{DejaVu Sans}
 \setmonofont{DejaVu Sans Mono}
 \newfontfamily\hebrewfonttt{DejaVu Sans Mono}[Renderer=HarfBuzz]
 
@@ -77,10 +73,10 @@
 \setlist[enumerate]{itemsep=0.22em,topsep=0.3em,leftmargin=1.8em}
 
 \titleformat{\section}
-  {\hebrewfontsf\Large\bfseries\color{academicblue}}
+  {\sffamily\Large\bfseries\color{academicblue}}
   {\thesection}{0.7em}{}
 \titleformat{\subsection}
-  {\hebrewfontsf\large\bfseries\color{deepnavy}}
+  {\sffamily\large\bfseries\color{deepnavy}}
   {\thesubsection}{0.6em}{}
 \titlespacing*{\section}{0pt}{1.45em}{0.55em}
 \titlespacing*{\subsection}{0pt}{1.1em}{0.4em}
@@ -100,7 +96,7 @@
 
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[R]{\hebrewfontsf\small\color{mutedgray} Gaussian HMM לזיהוי משטרי שוק}
+\fancyhead[R]{\sffamily\small\color{mutedgray} Gaussian HMM לזיהוי משטרי שוק}
 \fancyhead[L]{\sffamily\small\color{mutedgray} \LR{Advanced Machine Learning}}
 \fancyfoot[C]{\sffamily\small\color{mutedgray}\thepage}
 \renewcommand{\headrulewidth}{0.35pt}
@@ -124,31 +120,31 @@
 \thispagestyle{empty}
 \begin{center}
 \vspace*{0.9cm}
-{\hebrewfontsf\Large\color{mutedgray} המכללה האקדמית להנדסה אפקה \par}
+{\sffamily\Large\color{mutedgray} המכללה האקדמית להנדסה אפקה \par}
 \vspace{0.22cm}
-{\hebrewfontsf\large\color{mutedgray} תואר שני במערכות תבוניות \par}
+{\sffamily\large\color{mutedgray} תואר שני במערכות תבוניות \par}
 
 \vspace{1.45cm}
 {\color{linegray}\rule{0.82\textwidth}{0.8pt}}\par
 \vspace{0.8cm}
-{\hebrewfontsf\Huge\bfseries\color{academicblue} Gaussian HMM לזיהוי משטרי שוק ולחיזוי כיוון יומי \par}
+{\sffamily\Huge\bfseries\color{academicblue} Gaussian HMM לזיהוי משטרי שוק ולחיזוי כיוון יומי \par}
 \vspace{0.65cm}
 \begin{minipage}{0.82\textwidth}
 \centering
-{\hebrewfontsf\Large\color{deepnavy} ניתוח רב־נכסי, יציבות משטרים והשוואה למודלי בסיס ול־\LR{Supervised ML} \par}
+{\sffamily\Large\color{deepnavy} ניתוח רב־נכסי, יציבות משטרים והשוואה למודלי בסיס ול־\LR{Supervised ML} \par}
 \end{minipage}
 \vspace{0.8cm}
 {\color{linegray}\rule{0.82\textwidth}{0.8pt}}\par
 
 \vspace{1.35cm}
-{\hebrewfontsf\large עבודת גמר בקורס \textbf{שיטות מתקדמות בלמידת מכונה} \par}
+{\sffamily\large עבודת גמר בקורס \textbf{שיטות מתקדמות בלמידת מכונה} \par}
 
 \vfill
-{\hebrewfontsf\Large\bfseries\color{deepnavy} מתן אשל \par}
+{\sffamily\Large\bfseries\color{deepnavy} מתן אשל \par}
 \vspace{0.25cm}
-{\hebrewfontsf\large מספר סטודנט: \LR{203502802} \par}
+{\sffamily\large מספר סטודנט: \LR{203502802} \par}
 \vspace{0.75cm}
-{\hebrewfontsf\large\color{mutedgray} אוגוסט 2026 \par}
+{\sffamily\large\color{mutedgray} אוגוסט 2026 \par}
 \vspace{0.75cm}
 \end{center}
 \end{titlepage}
