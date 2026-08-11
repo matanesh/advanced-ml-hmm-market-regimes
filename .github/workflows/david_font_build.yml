@@ -1,0 +1,78 @@
+name: David font final report build
+
+on:
+  push:
+    branches:
+      - final/font-david
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install XeLaTeX and David CLM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            texlive-xetex texlive-latex-extra texlive-fonts-recommended \
+            texlive-lang-other texlive-lang-arabic culmus \
+            fonts-dejavu-core poppler-utils
+          fc-match "David CLM"
+
+      - name: Apply font-only patch
+        run: python patch_font_david.py
+
+      - name: Compile final report
+        run: |
+          set -euo pipefail
+          cd reports
+          rm -f report.aux report.bbl report.blg report.log report.out report.toc
+          xelatex -interaction=nonstopmode -halt-on-error report.tex
+          bibtex report
+          xelatex -interaction=nonstopmode -halt-on-error report.tex
+          xelatex -interaction=nonstopmode -halt-on-error report.tex
+          cd ..
+          pdfinfo reports/report.pdf | grep '^Pages:'
+          grep -nEi 'Missing character|undefined citation|undefined reference|^!' reports/report.log && exit 1 || true
+
+      - name: Update submission copies
+        run: |
+          set -euo pipefail
+          cp reports/report.pdf submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf
+          rm -f submission/HMM_Market_Regimes_Submission_Matan_Eshel_203502802.zip
+          zip -j submission/HMM_Market_Regimes_Submission_Matan_Eshel_203502802.zip \
+            submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf \
+            submission/HMM_Market_Regimes_Project_Matan_Eshel_203502802.ipynb \
+            submission/README_SUBMISSION.md
+          cmp reports/report.pdf submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf
+
+      - name: Render for visual QA
+        run: |
+          mkdir -p qa_david_renders
+          pdftoppm -png -r 170 reports/report.pdf qa_david_renders/page
+
+      - name: Upload visual QA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: david-font-report
+          path: |
+            reports/report.pdf
+            qa_david_renders/*.png
+
+      - name: Commit font-only output
+        run: |
+          set -euo pipefail
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add reports/report.tex reports/report.pdf \
+            submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf \
+            submission/HMM_Market_Regimes_Submission_Matan_Eshel_203502802.zip
+          git commit -m "Use David CLM for readable Hebrew report body"
+          git push origin HEAD:final/font-david
