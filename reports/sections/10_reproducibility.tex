@@ -16,10 +16,13 @@
 \begin{verbatim}
 python -m pip install -r requirements.txt
 python run_extended_analysis.py
-python analyze_extended_context.py --run-dir experiments_extended/<run_id>
+python analyze_extended_context.py \
+  --run-dir experiments_extended/<run_id>
 python run_supervised_baselines.py
-jupyter nbconvert --to notebook --execute HMM_Market_Regimes_Project.ipynb \
-  --output /tmp/HMM_verified.ipynb --ExecutePreprocessor.timeout=600
+jupyter nbconvert --to notebook --execute \
+  HMM_Market_Regimes_Project.ipynb \
+  --output /tmp/HMM_verified.ipynb \
+  --ExecutePreprocessor.timeout=600
 \end{verbatim}
 \end{english}
 
