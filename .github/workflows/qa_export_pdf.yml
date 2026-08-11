@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - qa/pdf-visual-artifact
+  pull_request:
+    branches:
+      - main
 
 jobs:
   export:
