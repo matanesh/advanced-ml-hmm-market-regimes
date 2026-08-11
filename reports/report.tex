@@ -23,22 +23,14 @@
 \setdefaultlanguage{hebrew}
 \setotherlanguage{english}
 
-% Prefer a restrained serif body similar to a traditional academic paper.
-% FreeSerif/FreeSans cover both Hebrew and Latin, which keeps mixed-language
-% sentences stable. The previous DejaVu setup remains the portable fallback.
-\IfFontExistsTF{FreeSerif}{
-  \setmainfont{FreeSerif}
-  \setsansfont{FreeSans}
-  \newfontfamily\hebrewfont{FreeSerif}[Script=Hebrew,Renderer=HarfBuzz]
-  \newfontfamily\hebrewfontsf{FreeSans}[Script=Hebrew,Renderer=HarfBuzz]
-  \newfontfamily\englishfont{FreeSerif}[Renderer=HarfBuzz]
-}{
-  \setmainfont{DejaVu Sans}
-  \setsansfont{DejaVu Sans}
-  \newfontfamily\hebrewfont{DejaVu Sans}[Script=Hebrew,Renderer=HarfBuzz]
-  \newfontfamily\hebrewfontsf{DejaVu Sans}[Script=Hebrew,Renderer=HarfBuzz]
-  \newfontfamily\englishfont{DejaVu Sans}[Renderer=HarfBuzz]
-}
+% Readability-first typography with one robust Hebrew/Latin family.
+% DejaVu Sans has complete coverage in the build environment and keeps mixed
+% Hebrew/English text stable while providing a clearer long-form reading face.
+\setmainfont{DejaVu Sans}
+\setsansfont{DejaVu Sans}
+\newfontfamily\hebrewfont{DejaVu Sans}[Script=Hebrew,Renderer=HarfBuzz]
+\newfontfamily\hebrewfontsf{DejaVu Sans}[Script=Hebrew,Renderer=HarfBuzz]
+\newfontfamily\englishfont{DejaVu Sans}[Renderer=HarfBuzz]
 \setmonofont{DejaVu Sans Mono}
 \newfontfamily\hebrewfonttt{DejaVu Sans Mono}[Renderer=HarfBuzz]
 
