@@ -5,15 +5,17 @@
 ה־HMM הושווה תחילה לארבעה כללים פשוטים, כדי לוודא שכל יתרון אינו נובע רק ממגמת שוק בסיסית:
 
 \begin{itemize}
-    \item \textbf{Naive - train mean:} מנבא לפי סימן ממוצע התשואה ב־Train.
-    \item \textbf{Naive persistence:} מנבא שהכיוון הבא יהיה זהה לכיוון האחרון.
-    \item \textbf{Moving Average 5:} כלל המבוסס על ממוצע נע קצר.
-    \item \textbf{Discrete Markov Chain:} מודל מעבר נצפה בין Up/Down ללא Hidden States.
+    \item \textbf{Naive - train mean:} זהו השם שנשמר ב־artifact. בהערכת ה־Test הסופית התחזית הקבועה מבוססת למעשה על ממוצע \(\texttt{next\_log\_return}\) בכל היסטוריית ה־pre-Test הזמינה, כלומר Train+Validation, לאחר סיום model selection.
+    \item \textbf{Naive persistence:} מנבא שהכיוון הבא יהיה זהה לכיוון האחרון שנצפה.
+    \item \textbf{Moving Average 5:} כלל סיבתי המבוסס על ממוצע נע קצר של תשואות זמינות עד היום הנוכחי.
+    \item \textbf{Discrete Markov Chain:} מודל מעבר נצפה בין Up/Down ללא Hidden States; הפרמטרים נאמדים מהיסטוריית ה־pre-Test בלבד.
 \end{itemize}
+
+שלושת ה־Baselines הפשוטים שדורשים אומדן היסטורי משתמשים, כמו ה־HMM הסופי, במידע שהיה זמין לפני תחילת ה־Test. אף אחד מהם אינו משתמש ב־Test targets לצורך התאמה.
 
 \subsection{Supervised ML Baselines}
 
-כדי לבדוק אם הקושי החיזויי נובע מבחירת HMM דווקא, נוספו שלושה classifiers המקבלים בדיוק את אותו Feature Vector ואותו split:
+כדי לבדוק אם הקושי החיזויי נובע מבחירת HMM דווקא, נוספו שלושה classifiers המקבלים בדיוק את אותו Feature Vector ואותו split כרונולוגי:
 
 \begin{itemize}
     \item \tech{Logistic Regression} עם \(C=1\) ו־scaling על Train בלבד.
@@ -21,7 +23,7 @@
     \item \tech{HistGradientBoostingClassifier} עם 200 iterations, learning rate 0.05 ו־15 leaves לכל היותר.
 \end{itemize}
 
-ה־hyperparameters נקבעו מראש, ללא search על Test. מטרת ההשוואה אינה להציג state-of-the-art supervised forecasting, אלא לבדוק האם מודלים ליניאריים ולא־ליניאריים פשוטים מצליחים לחלץ מה־Features signal שחסר ל־HMM.
+ה־hyperparameters נקבעו מראש, ללא search על Validation או Test, ושלושת המודלים הותאמו על Train בלבד. לכן הם משמשים \textbf{Baselines משלימים} ולא תחרות head-to-head מושלמת על כמות זהה של pre-Test observations: ה־HMM, לאחר בחירת \(K\) ו־seed על Validation, עובר refit על Train+Validation. מטרת ההשוואה היא לבדוק האם מודלים ליניאריים ולא־ליניאריים פשוטים מחלצים signal חיזויי ברור מאותם Features, ולא להכריז על classifier אופטימלי.
 
 \subsection{מדדים}
 
@@ -33,7 +35,7 @@
 
 למודלים שמחזירים תחזית מספרית לתשואה נמדדו גם MAE ו־RMSE על \textbf{next-day log return}. בנוסף נשמר MAPE על מחיר הסגירה המשתמע מהתחזית, בעיקר כדי לשמור התאמה למדדים שנקבעו בתכנון הפרויקט \cite{hyndman2006another}. MAPE אינו המדד המרכזי כאן: מחיר מחר בדרך כלל קרוב למחיר היום ולכן MAPE על מחיר יכול להיראות נמוך גם עבור Baseline פשוט, בעוד תשואה יומית יכולה להיות קרובה לאפס ולהפוך MAPE על תשואה לבלתי יציב.
 
-עבור מודלי classification נמדדו גם Balanced Accuracy, ROC-AUC, Log Loss ו־Brier Score. המדדים האחרונים חשובים משום ש־Accuracy רגיל עלול להיראות גבוה כאשר שיעור הימים החיוביים גבוה יחסית.
+עבור מודלי classification נמדדו גם Balanced Accuracy, ROC-AUC, Log Loss ו־Brier Score. המדדים האחרונים חשובים משום ש־Accuracy רגיל עלול להיראות גבוה כאשר שיעור הימים החיוביים גבוה יחסית. עבור classifiers, ה־DPA שקול ל־accuracy של מחלקת הכיוון; עבור המודלים שמחזירים \(\hat r_{t+1}\), הכיוון נגזר מסימן התחזית.
 
 ל־HMM נשמרו בנוסף log-likelihood, AIC/BIC, convergence, occupancy, Transition Matrix, dwell time, posterior confidence וזמן התאמה. מדדים אלה אינם מדדי forecasting; הם מתארים התאמה פנימית, מורכבות ומבנה של המודל. זמן הריצה נשמר לצורך reproducibility ולא שימש לבחירת מודל.
 
