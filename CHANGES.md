@@ -35,17 +35,20 @@
 ## Final empirical interpretation
 
 - No model shows a stable universal forecasting advantage across the nine assets.
-- Mean DPA across assets is approximately: Naive train-mean 54.54%, Logistic Regression 54.14%, Random Forest 53.27%, HMM soft posterior 53.06%, HistGradientBoosting 52.49%, HMM hard state 52.06%.
+- Mean DPA across assets is approximately: Naive train-mean 54.54%, Logistic Regression 54.14%, Discrete Markov Chain 53.90%, Random Forest 53.27%, HMM soft posterior 53.06%, HistGradientBoosting 52.49%, HMM hard state 52.06%, Naive persistence 50.45%, Moving Average 5 50.27%.
 - SPY `K=4` regimes are strongly differentiated descriptively by return, volatility, daily range, drawdown and dwell time.
 - SPY `K=4` is highly stable across seeds (mean pairwise ARI ≈ 0.995).
 - Posterior entropy is much higher on state-switch days than on non-switch days, while being only weakly related to return magnitude or rolling volatility. Because hard switches are defined from the same posterior, this is treated as an internal uncertainty diagnostic rather than independent validation.
 - VIX provides partial external support for regime interpretation: SPY states correspond to different VIX environments despite VIX not being a training feature.
 - Cross-asset correlations change with the SPY hidden state. This is reported as descriptive evidence only; the smaller states contain relatively few Test observations and no causal or significance claim is made.
+- The final write-up now reports all pre-specified simple baselines rather than only the strongest Naive baseline, and explicitly includes MAE/RMSE/price-MAPE for the numeric-return methods.
+- Added an explicit SPY `K=2/3/4` table showing Validation log-likelihood, BIC, occupancy and fit time, so model-selection claims are visible rather than merely stated.
 
 ## Notebook and report rewrite
 
 - Replaced the old five-asset narrative with a final nine-asset research story centered on the distinction between forecasting and latent regime representation.
 - Added `build_final_notebook.py`, which deterministically rebuilds `HMM_Market_Regimes_Project.ipynb` from verified result artifacts with natural Hebrew explanations around all major code/results.
+- Added `patch_final_notebook.py` for final academic-review corrections and compact completeness tables; it does not retrain or alter experiment artifacts.
 - Reorganized the XeLaTeX report into modular sections under `reports/sections/`.
 - Filled the title page with student name, ID, program and submission month.
 - Added explicit discussion of class imbalance and why DPA alone can be misleading.
@@ -55,12 +58,12 @@
 
 ## Final build / QA status
 
-The first complete final build was executed and committed at `db2bed4f89f5eb11a58c06ed70f4db04fa66955a`:
+A complete reviewed build was executed and committed at `eda3ddc3178be6f3a9513c9a4bfb47a573efa5d5`:
 
-- notebook built and executed top-to-bottom;
+- notebook executed top-to-bottom with 38 cells and all 11 code cells completed without error outputs;
+- `26 passed` in the full pytest run;
 - report compiled to a 20-page PDF;
-- all requested tests passed in the execution environment;
-- PDF build reported zero TeX errors, missing glyphs, unresolved references or unresolved citations;
-- all PDF pages were rendered to PNG successfully.
+- zero TeX errors, missing glyphs, unresolved references or unresolved citations were reported;
+- all PDF pages were rendered successfully.
 
-After that build, a final academic-review pass tightened several source-level interpretations. The report therefore needs one final XeLaTeX/BibTeX rebuild before submission. A human/vision page-by-page inspection of the rebuilt PDF is still required before merging to `main`.
+After that build, the final completeness audit found that the headline comparison table omitted three already-executed, pre-specified simple baselines and that MAE/RMSE/MAPE plus the explicit SPY K comparison were not visible enough in the final narrative. The source and notebook patch have now been corrected without running any new experiment. One final notebook execution and XeLaTeX/BibTeX rebuild are therefore required before merge to `main`.
