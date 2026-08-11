@@ -1,0 +1,97 @@
+\section{תוצאות: מבנה המשטרים}
+
+\subsection{בחירת מודל ויציבות}
+
+בריצה המורחבת נבחר \(K=4\) עבור שמונה מתוך תשעת הנכסים; עבור \asset{TLT} נבחר \(K=3\). הבחירה נעשתה לפי Validation log-likelihood בלבד. העובדה ש־\(K=4\) נבחר ברוב הנכסים אינה כשלעצמה הוכחה שזהו מספר states ``אמיתי''; לכן נבדקה גם יציבות בין seeds.
+
+עבור \asset{SPY}, ה־ARI הממוצע בין חמשת ה־seeds ב־\(K=4\) היה 0.995, עם מינימום של 0.992. גם \asset{QQQ} ו־\asset{NVDA} היו יציבים מאוד, עם ARI של כ־0.960 ו־0.984 בהתאמה. לעומת זאת, \asset{BTC-USD} ו־\asset{GLD} היו פחות יציבים ב־\(K=4\), עם ARI של כ־0.553 ו־0.681. לכן המסקנה אינה שכל נכס ``בנוי מארבעה משטרים'', אלא שהמודל העשיר יציב במיוחד בחלק מהנכסים ופחות באחרים.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{seed_stability_ari.png}
+\caption{יציבות חלוקת ה־states בין seeds לפי ARI. ערכים קרובים ל־1 מצביעים על חלוקה דומה מאוד גם לאחר שינוי initialization.}
+\label{fig:seedstability}
+\end{figure}
+
+\subsection{פירוש states ב־SPY}
+
+\asset{SPY} משמש מקרה המבחן המרכזי. הטבלה הבאה מסכמת את ארבעת ה־states על פני ההיסטוריה. השמות הם פרשנות post-hoc בלבד; הם לא הוזנו למודל.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{c l r r r r r r}
+\toprule
+State & פרשנות & שכיחות & תשואה & Vol. & Range & Mean DD & משך \\
+ & & (\%) & יומית (\%) & (\%) & (\%) & (\%) & ימים \\
+\midrule
+0 & Normal / moderate & 34.31 & 0.053 & 0.692 & 0.841 & -1.72 & 25.0 \\
+1 & Calm / low-vol & 25.00 & 0.092 & 0.415 & 0.586 & -0.42 & 32.4 \\
+2 & Rare stress / crisis-like & 4.46 & -0.265 & 3.409 & 3.614 & -15.28 & 8.0 \\
+3 & Persistent high-vol & 36.23 & 0.039 & 1.239 & 1.497 & -8.11 & 35.2 \\
+\bottomrule
+\end{tabular}
+\caption{מאפייני states של SPY. Vol. היא סטיית תקן יומית ו־Mean DD הוא drawdown ממוצע.}
+\label{tab:spystates}
+\end{table}
+
+State 2 בולט במיוחד: הוא נדיר, בעל תשואה יומית ממוצעת שלילית, volatility של כ־\pct{3.41}, daily range של כ־\pct{3.61}, mean drawdown של כ־\pct{-15.3} ו־worst drawdown של כ־\pct{-33.7}. לעומתו State 1 הוא state שקט עם volatility של כ־\pct{0.42} ו־drawdown קטן יחסית. זו הפרדה שמצדיקה לדבר על משטרים סטטיסטיים שונים, גם אם אין להם labels כלכליים חד־משמעיים.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{SPY/test_price_by_regime.png}
+\caption{מחיר SPY בתקופת ה־Test צבוע לפי ה־state הדומיננטי. הרצפים המתמשכים ממחישים שהמודל אינו מחליף state באופן אקראי בכל יום.}
+\label{fig:spyregimes}
+\end{figure}
+
+\subsection{Posterior uncertainty סביב מעברים}
+
+ה־posterior confidence הממוצע ב־SPY הוא כ־\pct{96.6}. עם זאת, ה־entropy הממוצע בימי state switch הוא 0.307 לעומת 0.054 בלבד בימים ללא switch. גם בחלון של יום לפני/אחרי מעבר מתקבל entropy ממוצע של כ־0.236. לעומת זאת, המתאם בין entropy לבין absolute return הוא רק 0.027, והמתאם עם rolling volatility הוא כ־-0.076.
+
+מכאן עולה ממצא חשוב: posterior entropy אינו פשוט proxy נוסף ל־volatility. הוא מתאר בעיקר \textbf{אי־ודאות של המודל לגבי גבול בין regimes}. כלומר ה־HMM מספק לא רק state label אלא גם מדד של confidence במצב הנוכחי.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{SPY/posterior_entropy_timeline.png}
+\caption{Posterior entropy לאורך תקופת ה־Test של SPY. קפיצות באנטרופיה מופיעות בעיקר סביב שינויי state.}
+\label{fig:entropy}
+\end{figure}
+
+\subsection{External validation מול VIX}
+
+ה־VIX לא שימש Feature ולא השתתף באימון. לכן הוא משמש בדיקת post-hoc חיצונית. בתקופת החפיפה של 412 ימי Test, State 1 של SPY היה קשור ל־VIX ממוצע של 12.96, State 0 ל־15.34 ו־State 3 ל־18.55. ב־State 3 כ־\pct{26.1} מהימים היו מעל VIX=20, לעומת \pct{6.15} ב־State 0 ואפס ב־State 1.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.78\textwidth]{vix_by_spy_regime.png}
+\caption{רמת VIX לפי state של SPY. VIX אינו חלק מווקטור התכונות ולכן משמש אינדיקציה חיצונית לפרשנות המשטרים.}
+\label{fig:vix}
+\end{figure}
+
+State 2 הנדיר לא הופיע בחפיפה זו ולכן אי אפשר להשתמש ב־VIX כדי לאמת אותו בתקופת ה־Test. בנוסף, entropy עצמו כמעט אינו מתואם עם רמת VIX, ולכן אין לזהות בין ``אי־ודאות של ה־HMM'' לבין ``פחד בשוק''.
+
+\subsection{Cross-asset behavior}
+
+כדי לבדוק האם state של SPY משקף מצב שוק רחב יותר, חושבו סטטיסטיקות של נכסים אחרים מותנות ב־SPY state. ב־State 3 הקורלציה עם SPY מגיעה לכ־0.978 ב־QQQ, 0.773 ב־HYG, 0.631 ב־BTC-USD, 0.680 ב־JPM ו־0.769 ב־NVDA. באותו state, TLT נמצא בקורלציה קרובה לאפס ואף מעט שלילית (-0.044).
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{l r r r}
+\toprule
+Asset & Corr. State 0 & Corr. State 1 & Corr. State 3 \\
+\midrule
+\asset{QQQ} & 0.924 & 0.849 & 0.978 \\
+\asset{IWM} & 0.733 & 0.240 & 0.879 \\
+\asset{TLT} & 0.213 & 0.265 & -0.044 \\
+\asset{HYG} & 0.636 & 0.515 & 0.773 \\
+\asset{BTC-USD} & 0.207 & 0.329 & 0.631 \\
+\asset{JPM} & 0.435 & 0.106 & 0.680 \\
+\asset{NVDA} & 0.575 & 0.548 & 0.769 \\
+\bottomrule
+\end{tabular}
+\caption{קורלציה עם SPY כתלות ב־Hidden State של SPY בתקופת ה־Test.}
+\label{tab:crossasset}
+\end{table}
+
+תוצאה זו מחזקת את הפרשנות של ה־HMM כ־latent market-state estimator: ה־state אינו רק תיאור של תנודתיות SPY, אלא מתקשר גם לשינוי במבנה התלות בין asset classes.
