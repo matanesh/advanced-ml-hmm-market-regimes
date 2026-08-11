@@ -2,7 +2,7 @@
 
 \usepackage{fontspec}
 \usepackage{amsmath,amssymb,amsfonts}
-\usepackage[a4paper,top=2.2cm,bottom=2.2cm,left=2.35cm,right=2.35cm]{geometry}
+\usepackage[a4paper,top=2.15cm,bottom=2.2cm,left=2.4cm,right=2.4cm]{geometry}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{array,tabularx,longtable,makecell}
@@ -15,23 +15,44 @@
 \usepackage{parskip}
 \usepackage{ragged2e}
 \usepackage{titlesec}
-\usepackage{xcolor}
+\usepackage[table]{xcolor}
 \usepackage{fancyhdr}
 \usepackage{hyperref}
 \usepackage{polyglossia}
 
 \setdefaultlanguage{hebrew}
 \setotherlanguage{english}
-\setmainfont{DejaVu Sans}
+
+% Academic body typeface with robust fallbacks. Hebrew body text is serif for
+% long-form readability; headings remain sans-serif for a clean hierarchy.
+\IfFontExistsTF{Libertinus Serif}{
+  \setmainfont{Libertinus Serif}
+  \newfontfamily\englishfont{Libertinus Serif}[Renderer=HarfBuzz]
+}{
+  \setmainfont{DejaVu Serif}
+  \newfontfamily\englishfont{DejaVu Serif}[Renderer=HarfBuzz]
+}
+\IfFontExistsTF{Noto Serif Hebrew}{
+  \newfontfamily\hebrewfont{Noto Serif Hebrew}[Script=Hebrew,Renderer=HarfBuzz]
+}{
+  \newfontfamily\hebrewfont{DejaVu Sans}[Script=Hebrew,Renderer=HarfBuzz]
+}
+\IfFontExistsTF{Noto Sans Hebrew}{
+  \newfontfamily\hebrewfontsf{Noto Sans Hebrew}[Script=Hebrew,Renderer=HarfBuzz]
+}{
+  \newfontfamily\hebrewfontsf{DejaVu Sans}[Script=Hebrew,Renderer=HarfBuzz]
+}
 \setsansfont{DejaVu Sans}
 \setmonofont{DejaVu Sans Mono}
-\newfontfamily\hebrewfont{DejaVu Sans}[Script=Hebrew,Renderer=HarfBuzz]
-\newfontfamily\hebrewfontsf{DejaVu Sans}[Script=Hebrew,Renderer=HarfBuzz]
 \newfontfamily\hebrewfonttt{DejaVu Sans Mono}[Renderer=HarfBuzz]
-\newfontfamily\englishfont{DejaVu Sans}[Renderer=HarfBuzz]
 
-\definecolor{academicblue}{RGB}{25,65,110}
-\definecolor{softgray}{RGB}{245,247,249}
+\definecolor{academicblue}{RGB}{31,73,112}
+\definecolor{deepnavy}{RGB}{25,48,72}
+\definecolor{mutedgray}{RGB}{92,101,110}
+\definecolor{linegray}{RGB}{218,223,228}
+\definecolor{softgray}{RGB}{247,248,250}
+\definecolor{tablegray}{RGB}{244,246,248}
+
 \hypersetup{
   colorlinks=true,
   linkcolor=academicblue,
@@ -39,26 +60,52 @@
   urlcolor=academicblue,
   pdfencoding=auto,
   psdextra,
-  pdftitle={Gaussian HMM לזיהוי משטרי שוק ולחיזוי כיוון יומי}
+  pdftitle={Gaussian HMM לזיהוי משטרי שוק ולחיזוי כיוון יומי},
+  pdfauthor={Matan Eshel}
 }
 
-\setstretch{1.12}
+\setstretch{1.10}
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{0.55em}
-\setlength{\emergencystretch}{2em}
-\setlist[itemize]{itemsep=0.25em,topsep=0.3em}
-\setlist[enumerate]{itemsep=0.25em,topsep=0.3em}
-\titleformat{\section}{\Large\bfseries\color{academicblue}}{\thesection}{0.7em}{}
-\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.6em}{}
-\captionsetup{font=small,labelfont=bf,justification=justified,singlelinecheck=false}
-\renewcommand{\arraystretch}{1.18}
+\setlength{\parskip}{0.48em}
+\setlength{\emergencystretch}{3em}
+\raggedbottom
+\clubpenalty=10000
+\widowpenalty=10000
+\displaywidowpenalty=10000
+
+\setlist[itemize]{itemsep=0.22em,topsep=0.3em,leftmargin=1.7em}
+\setlist[enumerate]{itemsep=0.22em,topsep=0.3em,leftmargin=1.8em}
+
+\titleformat{\section}
+  {\hebrewfontsf\Large\bfseries\color{academicblue}}
+  {\thesection}{0.7em}{}
+\titleformat{\subsection}
+  {\hebrewfontsf\large\bfseries\color{deepnavy}}
+  {\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{1.45em}{0.55em}
+\titlespacing*{\subsection}{0pt}{1.1em}{0.4em}
+
+\captionsetup{
+  font=small,
+  labelfont={bf,color=deepnavy},
+  textfont={color=mutedgray},
+  justification=justified,
+  singlelinecheck=false,
+  skip=5pt
+}
+\renewcommand{\arraystretch}{1.16}
+\setlength{\tabcolsep}{5pt}
+\setlength{\textfloatsep}{1.05em plus 0.2em minus 0.2em}
+\setlength{\intextsep}{0.95em plus 0.2em minus 0.2em}
 
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[R]{\small \texthebrew{Gaussian HMM לזיהוי משטרי שוק}}
-\fancyhead[L]{\small \LR{Advanced Machine Learning}}
-\fancyfoot[C]{\thepage}
-\setlength{\headheight}{14pt}
+\fancyhead[R]{\hebrewfontsf\small\color{mutedgray} Gaussian HMM לזיהוי משטרי שוק}
+\fancyhead[L]{\sffamily\small\color{mutedgray} \LR{Advanced Machine Learning}}
+\fancyfoot[C]{\sffamily\small\color{mutedgray}\thepage}
+\renewcommand{\headrulewidth}{0.35pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{linegray}\leaders\hrule height \headrulewidth\hfill}}
+\setlength{\headheight}{15pt}
 
 \newcommand{\tech}[1]{\LR{#1}}
 \newcommand{\asset}[1]{\LR{#1}}
@@ -66,6 +113,8 @@
 \newcommand{\datecode}[1]{\mbox{\textenglish{#1}}}
 \newcommand{\code}[1]{\mbox{\textenglish{\texttt{\detokenize{#1}}}}}
 \newcolumntype{Y}{>{\RaggedLeft\arraybackslash}X}
+\newcolumntype{L}{>{\RaggedRight\arraybackslash}X}
+\newcolumntype{C}{>{\centering\arraybackslash}X}
 
 \graphicspath{{../experiments_extended/extended_20260811_121957/}{../experiments_supervised/supervised_20260811_133344/}}
 
@@ -73,29 +122,42 @@
 
 \begin{titlepage}
 \thispagestyle{empty}
-\centering
-\vspace*{1.2cm}
-{\Large המכללה האקדמית להנדסה אפקה \par}
-\vspace{0.4cm}
-{\large תואר שני במערכות תבוניות \par}
-\vspace{1.6cm}
-{\Huge\bfseries Gaussian HMM לזיהוי משטרי שוק ולחיזוי כיוון יומי \par}
-\vspace{0.7cm}
-{\Large ניתוח רב־נכסי, יציבות משטרים והשוואה למודלי בסיס ול־Supervised ML \par}
-\vspace{1.5cm}
-{\large עבודת גמר בקורס \textbf{שיטות מתקדמות בלמידת מכונה} \par}
-\vfill
-{\large \textbf{מתן אשל} \par}
-\vspace{0.2cm}
-{\large מספר סטודנט: \LR{203502802} \par}
-\vfill
-{\large אוגוסט 2026 \par}
+\begin{center}
+\vspace*{0.9cm}
+{\hebrewfontsf\Large\color{mutedgray} המכללה האקדמית להנדסה אפקה \par}
+\vspace{0.22cm}
+{\hebrewfontsf\large\color{mutedgray} תואר שני במערכות תבוניות \par}
+
+\vspace{1.45cm}
+{\color{linegray}\rule{0.82\textwidth}{0.8pt}}\par
 \vspace{0.8cm}
+{\hebrewfontsf\Huge\bfseries\color{academicblue} Gaussian HMM לזיהוי משטרי שוק ולחיזוי כיוון יומי \par}
+\vspace{0.65cm}
+\begin{minipage}{0.82\textwidth}
+\centering
+{\hebrewfontsf\Large\color{deepnavy} ניתוח רב־נכסי, יציבות משטרים והשוואה למודלי בסיס ול־\LR{Supervised ML} \par}
+\end{minipage}
+\vspace{0.8cm}
+{\color{linegray}\rule{0.82\textwidth}{0.8pt}}\par
+
+\vspace{1.35cm}
+{\hebrewfontsf\large עבודת גמר בקורס \textbf{שיטות מתקדמות בלמידת מכונה} \par}
+
+\vfill
+{\hebrewfontsf\Large\bfseries\color{deepnavy} מתן אשל \par}
+\vspace{0.25cm}
+{\hebrewfontsf\large מספר סטודנט: \LR{203502802} \par}
+\vspace{0.75cm}
+{\hebrewfontsf\large\color{mutedgray} אוגוסט 2026 \par}
+\vspace{0.75cm}
+\end{center}
 \end{titlepage}
 
 \pagenumbering{roman}
 \input{sections/00_abstract}
+\clearpage
 \tableofcontents
+\thispagestyle{plain}
 \clearpage
 \pagenumbering{arabic}
 
@@ -112,6 +174,9 @@
 
 \clearpage
 \bibliographystyle{plain}
+\begingroup
+\small
 \bibliography{references}
+\endgroup
 
 \end{document}
