@@ -48,7 +48,7 @@ State 2 בולט במיוחד: הוא נדיר, בעל תשואה יומית מ�
 
 ה־posterior confidence הממוצע ב־SPY הוא כ־\pct{96.6}. עם זאת, ה־entropy הממוצע בימי state switch הוא 0.307 לעומת 0.054 בלבד בימים ללא switch. גם בחלון של יום לפני/אחרי מעבר מתקבל entropy ממוצע של כ־0.236. לעומת זאת, המתאם בין entropy לבין absolute return הוא רק 0.027, והמתאם עם rolling volatility הוא כ־-0.076.
 
-מכאן עולה ממצא חשוב: posterior entropy אינו פשוט proxy נוסף ל־volatility. הוא מתאר בעיקר \textbf{אי־ודאות של המודל לגבי גבול בין regimes}. כלומר ה־HMM מספק לא רק state label אלא גם מדד של confidence במצב הנוכחי.
+הממצא מצביע על כך שה־posterior מכיל מידע על מידת הביטחון של המודל, ולא רק state label. עם זאת, יש כאן נקודת זהירות חשובה: hard switch מוגדר לפי שינוי ב־argmax של אותו posterior, ולכן צפוי במידה מסוימת שימים סמוכים לגבול בין שני states יהיו גם ימים בעלי entropy גבוהה יותר. לכן הקשר בין entropy ל־switch משמש כאן בעיקר \textbf{diagnostic פנימי של ambiguity}, ולא validation חיצוני עצמאי של שינוי משטר. העובדה שה־entropy כמעט אינה מתואמת עם absolute return או rolling volatility עדיין מראה שהיא אינה רק proxy פשוט לעוצמת התנודתיות.
 
 \begin{figure}[H]
 \centering
@@ -59,7 +59,7 @@ State 2 בולט במיוחד: הוא נדיר, בעל תשואה יומית מ�
 
 \subsection{External validation מול VIX}
 
-ה־VIX לא שימש Feature ולא השתתף באימון. לכן הוא משמש בדיקת post-hoc חיצונית. בתקופת החפיפה של 412 ימי Test, State 1 של SPY היה קשור ל־VIX ממוצע של 12.96, State 0 ל־15.34 ו־State 3 ל־18.55. ב־State 3 כ־\pct{26.1} מהימים היו מעל VIX=20, לעומת \pct{6.15} ב־State 0 ואפס ב־State 1.
+ה־VIX לא שימש Feature ולא השתתף באימון. לכן הוא משמש בדיקת post-hoc חיצונית של פרשנות ה־states, ולא בדיקת forecasting. בתקופת החפיפה של 412 ימי Test, State 1 של SPY היה קשור ל־VIX ממוצע של 12.96, State 0 ל־15.34 ו־State 3 ל־18.55. ב־State 3 כ־\pct{26.1} מהימים היו מעל VIX=20, לעומת \pct{6.15} ב־State 0 ואפס ב־State 1.
 
 \begin{figure}[H]
 \centering
@@ -94,4 +94,4 @@ Asset & Corr. State 0 & Corr. State 1 & Corr. State 3 \\
 \label{tab:crossasset}
 \end{table}
 
-תוצאה זו מחזקת את הפרשנות של ה־HMM כ־latent market-state estimator: ה־state אינו רק תיאור של תנודתיות SPY, אלא מתקשר גם לשינוי במבנה התלות בין asset classes.
+התוצאה תומכת בפרשנות של ה־HMM כ־latent market-state estimator: ה־state אינו רק תיאור של תנודתיות SPY, אלא מתקשר גם לשינוי במבנה התלות בין asset classes. עם זאת, מדובר בניתוח תיאורי על מדגם Test מוגבל: בתקופת החפיפה היו 325 ימים ב־State 0, אך רק 41 ימים ב־State 1 ו־46 ב־State 3, בעוד State 2 לא הופיע. לכן לא מוצגת כאן טענת מובהקות או סיבתיות לגבי שינויי הקורלציה.
