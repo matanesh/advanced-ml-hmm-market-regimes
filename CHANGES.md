@@ -36,11 +36,11 @@
 
 - No model shows a stable universal forecasting advantage across the nine assets.
 - Mean DPA across assets is approximately: Naive train-mean 54.54%, Logistic Regression 54.14%, Random Forest 53.27%, HMM soft posterior 53.06%, HistGradientBoosting 52.49%, HMM hard state 52.06%.
-- SPY `K=4` regimes are strongly differentiated by return, volatility, daily range, drawdown and dwell time.
+- SPY `K=4` regimes are strongly differentiated descriptively by return, volatility, daily range, drawdown and dwell time.
 - SPY `K=4` is highly stable across seeds (mean pairwise ARI ≈ 0.995).
-- Posterior entropy is much higher on state-switch days than on non-switch days, while being only weakly related to return magnitude or rolling volatility.
-- VIX provides partial external validation: SPY states correspond to materially different VIX environments despite VIX not being a training feature.
-- Cross-asset correlations change with the SPY hidden state, supporting the interpretation of HMM as a latent market-condition estimator rather than only a ticker-specific clustering device.
+- Posterior entropy is much higher on state-switch days than on non-switch days, while being only weakly related to return magnitude or rolling volatility. Because hard switches are defined from the same posterior, this is treated as an internal uncertainty diagnostic rather than independent validation.
+- VIX provides partial external support for regime interpretation: SPY states correspond to different VIX environments despite VIX not being a training feature.
+- Cross-asset correlations change with the SPY hidden state. This is reported as descriptive evidence only; the smaller states contain relatively few Test observations and no causal or significance claim is made.
 
 ## Notebook and report rewrite
 
@@ -51,13 +51,16 @@
 - Added explicit discussion of class imbalance and why DPA alone can be misleading.
 - Added a substantial Future Work section on regime-aware Reinforcement Learning, including a proposed HMM-posterior ablation and a balanced literature discussion. No RL result is claimed because no RL experiment was run.
 - Expanded the bibliography with PPO, SAC, FinRL and financial Deep RL studies, including both positive and cautionary empirical results.
+- Added final scientific caveats distinguishing internal posterior diagnostics from external validation and clarified that the common 2014-2024 interval is a requested window rather than an identical observed start date for every asset.
 
-## Remaining execution/QA before submission
+## Final build / QA status
 
-1. Run `python build_final_notebook.py`.
-2. Execute the rebuilt notebook top-to-bottom with `nbconvert` and commit the executed notebook.
-3. Compile `reports/report.tex` with XeLaTeX/BibTeX.
-4. Render and visually inspect every PDF page for RTL/LTR, clipped tables, figures and equations.
-5. Run the relevant pytest suite and syntax checks once more.
-6. Update README to point to the final extended/supervised artifacts.
-7. Merge the final reviewed branch into `main` only after the above checks pass.
+The first complete final build was executed and committed at `db2bed4f89f5eb11a58c06ed70f4db04fa66955a`:
+
+- notebook built and executed top-to-bottom;
+- report compiled to a 20-page PDF;
+- all requested tests passed in the execution environment;
+- PDF build reported zero TeX errors, missing glyphs, unresolved references or unresolved citations;
+- all PDF pages were rendered to PNG successfully.
+
+After that build, a final academic-review pass tightened several source-level interpretations. The report therefore needs one final XeLaTeX/BibTeX rebuild before submission. A human/vision page-by-page inspection of the rebuilt PDF is still required before merging to `main`.
