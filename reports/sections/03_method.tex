@@ -26,17 +26,19 @@ a_{ij}=P(S_t=j\mid S_{t-1}=i),
 
 \subsection{בחירת מספר המצבים}
 
-לכל נכס נבדקו \(K=2,3,4\) וחמישה seeds: \(42,123,456,789,2026\). הבחירה הקנונית של \(K\) ו־seed נעשתה לפי Validation log-likelihood בלבד. AIC ו־BIC נשמרו כאבחוני complexity נוספים \cite{akaike1974new,schwarz1978estimating}, אך Test לא שימש בשום שלב של model selection.
+לכל נכס נבדקו \(K=2,3,4\) וחמישה seeds: \(42,123,456,789,2026\). הבחירה של \(K\) ו־seed נעשתה לפי Validation log-likelihood בלבד. AIC ו־BIC נשמרו כאבחוני complexity נוספים \cite{akaike1974new,schwarz1978estimating}, אך Test לא שימש בשום שלב של model selection.
 
 בחירת מספר states ב־HMM אינה בעיה טריוויאלית: מודל עשיר יותר יכול לשפר likelihood אך גם ליצור states נדירים או רגישים לאתחול \cite{pohle2017selecting}. לכן בנוסף לציון ההתאמה נבדקו occupancy ויציבות בין seeds.
 
 \subsection{Hard state לעומת Soft posterior}
 
-ב־hard decoding כל יום מקבל state יחיד. לעומת זאת, posterior inference מחזיר וקטור
+ב־hard decoding כל יום מקבל state יחיד. לצורך ההערכה מחוץ למדגם השתמשנו ב־\textbf{past-only inference}: עבור יום Test בזמן \(t\), רצף הקלט נחתך כך שאינו כולל תצפיות אחרי \(t\). לכן וקטור ההסתברויות שבו משתמשת התחזית הוא
 
 \begin{equation}
-\gamma_t(k)=P(S_t=k\mid X_{1:T}).
+\gamma_t(k)=P(S_t=k\mid X_{1:t}),
 \end{equation}
+
+ולא posterior שמוחלק בעזרת כל רצף ה־Test העתידי. בפועל נשמר גם context מוגבל של היסטוריית Train/Validation כדי לאתחל את inference הרצפי, אך אין שימוש ב־\(X_{t+1},X_{t+2},\ldots\) בעת חיזוי יום \(t+1\).
 
 בגרסת soft forecast, תחזית התשואה של היום הבא היא ממוצע משוקלל לפי \(\gamma_t\), במקום להסתמך רק על argmax. המוטיבציה היא שיום שנמצא בדיוק בגבול בין שני regimes לא צריך להיחשב כאילו המודל בטוח לחלוטין ב־state אחד.
 
