@@ -1,0 +1,18 @@
+name: QA final polished PDF visual
+
+on:
+  push:
+    branches:
+      - qa/final-pdf-visual-2
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload final report PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-polished-report-2
+          path: reports/report.pdf
+          if-no-files-found: error
