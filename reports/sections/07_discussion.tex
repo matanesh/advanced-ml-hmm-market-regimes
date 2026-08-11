@@ -10,7 +10,9 @@
 
 \subsection{מה ה־HMM כן מוסיף?}
 
-בניגוד ל־classifier, HMM בונה ייצוג מפורש של מצב לטנטי ושל דינמיקת המעבר בין states. ב־SPY ההפרדה בין states ניכרת במספר ממדים בו־זמנית: return, volatility, range, drawdown ו־dwell time. ה־posterior confidence גבוה ברוב הימים, אך האנטרופיה עולה סביב switch. בנוסף, VIX שלא שימש באימון מפריד בין חלק מה־states, והקורלציה של SPY עם נכסים אחרים משתנה לפי state.
+בניגוד ל־classifier, HMM בונה ייצוג מפורש של מצב לטנטי ושל דינמיקת המעבר בין states. ב־SPY ההפרדה בין states ניכרת במספר ממדים בו־זמנית: return, volatility, range, drawdown ו־dwell time. ה־posterior confidence גבוה ברוב הימים, והאנטרופיה עולה כאשר המודל נמצא באזור ambiguity בין states. חשוב לא להפריז בפרשנות של הקשר הזה: מאחר ש־hard switch נגזר מאותו posterior, entropy גבוהה סביב switch היא בחלקה תוצאה צפויה של הגדרת הגבול. לכן זהו diagnostic פנימי של confidence, לא validation עצמאי.
+
+הראיות החיצוניות יותר מגיעות ממקומות אחרים: VIX שלא שימש באימון מפריד בין חלק מה־states, והקורלציה של SPY עם נכסים אחרים משתנה לפי state. גם כאן מדובר ב־post-hoc descriptive evidence ולא בהוכחה סיבתית, אך הוא מראה שה־state קשור למאפייני שוק שאינם חלק ישיר מה־Feature Vector של SPY.
 
 לכן ה־HMM מספק \textbf{conditional market context}. במקום לשאול רק ``האם מחר יהיה Up?'', ניתן לשאול ``באיזה סוג סביבה סטטיסטית אנחנו נמצאים, כמה המודל בטוח בכך, וכיצד נכסים אחרים נוטים להתנהג בסביבה זו?''. זו יכולת שאינה נמדדת ישירות ב־DPA.
 
