@@ -23,14 +23,13 @@
 \setdefaultlanguage{hebrew}
 \setotherlanguage{english}
 
-% Readability-first typography with one robust Hebrew/Latin family.
-% DejaVu Sans has complete coverage in the build environment and keeps mixed
-% Hebrew/English text stable while providing a clearer long-form reading face.
-\setmainfont{DejaVu Sans}
-\setsansfont{DejaVu Sans}
-\newfontfamily\hebrewfont{DejaVu Sans}[Script=Hebrew,Renderer=HarfBuzz]
-\newfontfamily\hebrewfontsf{DejaVu Sans}[Script=Hebrew,Renderer=HarfBuzz]
-\newfontfamily\englishfont{DejaVu Sans}[Renderer=HarfBuzz]
+% Final submission typography: David CLM for Hebrew/Latin prose and headings.
+% Keep a separate monospace font for code, paths, and run IDs.
+\setmainfont{David CLM}
+\setsansfont{David CLM}
+\newfontfamily\hebrewfont{David CLM}[Script=Hebrew,Renderer=HarfBuzz]
+\newfontfamily\hebrewfontsf{David CLM}[Script=Hebrew,Renderer=HarfBuzz]
+\newfontfamily\englishfont{David CLM}[Renderer=HarfBuzz]
 \setmonofont{DejaVu Sans Mono}
 \newfontfamily\hebrewfonttt{DejaVu Sans Mono}[Renderer=HarfBuzz]
 
