@@ -1,0 +1,94 @@
+name: Readability rewrite report build
+
+on:
+  push:
+    branches:
+      - final/readability-rewrite
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install XeLaTeX and fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            texlive-xetex texlive-latex-extra texlive-fonts-recommended \
+            texlive-lang-other texlive-lang-arabic \
+            fonts-noto-core fonts-dejavu-core poppler-utils zip
+          fc-match "Noto Serif Hebrew"
+          fc-match "Noto Sans Hebrew"
+          fc-match "Noto Serif"
+
+      - name: Source readability checks
+        run: |
+          set -euo pipefail
+          echo "Visible double-hyphen check in report sections 00-09:"
+          if grep -RIn --include='0*.tex' --include='sections/0*.tex' -- '--' reports/sections/00_abstract.tex reports/sections/01_intro.tex reports/sections/02_data_protocol.tex reports/sections/03_method.tex reports/sections/04_experiments.tex reports/sections/05_regime_results.tex reports/sections/06_prediction_results.tex reports/sections/07_discussion.tex reports/sections/08_rl_future_work.tex reports/sections/09_limitations_conclusion.tex; then
+            echo "Unexpected double hyphen found in visible report prose"
+            exit 1
+          fi
+
+      - name: Compile report
+        run: |
+          set -euo pipefail
+          cd reports
+          rm -f report.aux report.bbl report.blg report.log report.out report.toc
+          xelatex -interaction=nonstopmode -halt-on-error report.tex
+          bibtex report
+          xelatex -interaction=nonstopmode -halt-on-error report.tex
+          xelatex -interaction=nonstopmode -halt-on-error report.tex
+          cd ..
+          pdfinfo reports/report.pdf | grep '^Pages:'
+          if grep -nEi 'Missing character|undefined citation|undefined reference|^!' reports/report.log; then
+            echo 'Blocking TeX issue detected'
+            exit 1
+          fi
+          echo "Overfull boxes: $(grep -c 'Overfull' reports/report.log || true)"
+          echo "Underfull boxes: $(grep -c 'Underfull' reports/report.log || true)"
+
+      - name: Update submission package
+        run: |
+          set -euo pipefail
+          cp reports/report.pdf submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf
+          rm -f submission/HMM_Market_Regimes_Submission_Matan_Eshel_203502802.zip
+          zip -j submission/HMM_Market_Regimes_Submission_Matan_Eshel_203502802.zip \
+            submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf \
+            submission/HMM_Market_Regimes_Project_Matan_Eshel_203502802.ipynb \
+            submission/README_SUBMISSION.md
+          cmp reports/report.pdf submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf
+
+      - name: Render every page for visual QA
+        run: |
+          rm -rf qa_readability_renders
+          mkdir -p qa_readability_renders
+          pdftoppm -png -r 180 reports/report.pdf qa_readability_renders/page
+          test "$(find qa_readability_renders -name 'page-*.png' | wc -l)" -gt 0
+
+      - name: Upload QA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: readability-rewrite-report
+          path: |
+            reports/report.pdf
+            reports/report.log
+            qa_readability_renders/*.png
+
+      - name: Commit rebuilt report and package
+        run: |
+          set -euo pipefail
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add reports/report.pdf \
+            submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf \
+            submission/HMM_Market_Regimes_Submission_Matan_Eshel_203502802.zip
+          git commit -m "Rebuild readable expanded final report"
+          git push origin HEAD:final/readability-rewrite
