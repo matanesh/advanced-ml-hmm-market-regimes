@@ -23,16 +23,16 @@ jobs:
           sudo apt-get install -y \
             texlive-xetex texlive-latex-extra texlive-fonts-recommended \
             texlive-lang-other texlive-lang-arabic \
-            fonts-noto-core fonts-dejavu-core poppler-utils zip
-          fc-match "Noto Serif Hebrew"
-          fc-match "Noto Sans Hebrew"
-          fc-match "Noto Serif"
+            fonts-liberation fonts-croscore fonts-dejavu-core poppler-utils zip
+          fc-match "Liberation Serif"
+          fc-match "Arimo"
+          fc-match "DejaVu Sans Mono"
 
       - name: Source readability checks
         run: |
           set -euo pipefail
           echo "Visible double-hyphen check in report sections 00-09:"
-          if grep -RIn --include='0*.tex' --include='sections/0*.tex' -- '--' reports/sections/00_abstract.tex reports/sections/01_intro.tex reports/sections/02_data_protocol.tex reports/sections/03_method.tex reports/sections/04_experiments.tex reports/sections/05_regime_results.tex reports/sections/06_prediction_results.tex reports/sections/07_discussion.tex reports/sections/08_rl_future_work.tex reports/sections/09_limitations_conclusion.tex; then
+          if grep -RIn -- '--' reports/sections/00_abstract.tex reports/sections/01_intro.tex reports/sections/02_data_protocol.tex reports/sections/03_method.tex reports/sections/04_experiments.tex reports/sections/05_regime_results.tex reports/sections/06_prediction_results.tex reports/sections/07_discussion.tex reports/sections/08_rl_future_work.tex reports/sections/09_limitations_conclusion.tex; then
             echo "Unexpected double hyphen found in visible report prose"
             exit 1
           fi
