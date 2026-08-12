@@ -23,14 +23,13 @@
 \setdefaultlanguage{hebrew}
 \setotherlanguage{english}
 
-% Readability-first typography with one robust Hebrew/Latin family.
-% DejaVu Sans has complete coverage in the build environment and keeps mixed
-% Hebrew/English text stable while providing a clearer long-form reading face.
-\setmainfont{DejaVu Sans}
-\setsansfont{DejaVu Sans}
-\newfontfamily\hebrewfont{DejaVu Sans}[Script=Hebrew,Renderer=HarfBuzz]
-\newfontfamily\hebrewfontsf{DejaVu Sans}[Script=Hebrew,Renderer=HarfBuzz]
-\newfontfamily\englishfont{DejaVu Sans}[Renderer=HarfBuzz]
+% Readability-first typography. Noto Serif Hebrew is used for Hebrew body text,
+% with matching Noto families for Latin text and headings.
+\setmainfont{Noto Serif}
+\setsansfont{Noto Sans}
+\newfontfamily\hebrewfont{Noto Serif Hebrew}[Script=Hebrew,Renderer=HarfBuzz]
+\newfontfamily\hebrewfontsf{Noto Sans Hebrew}[Script=Hebrew,Renderer=HarfBuzz]
+\newfontfamily\englishfont{Noto Serif}[Renderer=HarfBuzz]
 \setmonofont{DejaVu Sans Mono}
 \newfontfamily\hebrewfonttt{DejaVu Sans Mono}[Renderer=HarfBuzz]
 
@@ -52,17 +51,17 @@
   pdfauthor={Matan Eshel}
 }
 
-\setstretch{1.10}
+\setstretch{1.16}
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{0.48em}
-\setlength{\emergencystretch}{3em}
+\setlength{\parskip}{0.62em}
+\setlength{\emergencystretch}{4em}
 \raggedbottom
 \clubpenalty=10000
 \widowpenalty=10000
 \displaywidowpenalty=10000
 
-\setlist[itemize]{itemsep=0.22em,topsep=0.3em,leftmargin=1.7em}
-\setlist[enumerate]{itemsep=0.22em,topsep=0.3em,leftmargin=1.8em}
+\setlist[itemize]{itemsep=0.34em,topsep=0.42em,leftmargin=1.7em}
+\setlist[enumerate]{itemsep=0.34em,topsep=0.42em,leftmargin=1.8em}
 
 \titleformat{\section}
   {\sffamily\Large\bfseries\color{academicblue}}
@@ -70,8 +69,8 @@
 \titleformat{\subsection}
   {\sffamily\large\bfseries\color{deepnavy}}
   {\thesubsection}{0.6em}{}
-\titlespacing*{\section}{0pt}{1.45em}{0.55em}
-\titlespacing*{\subsection}{0pt}{1.1em}{0.4em}
+\titlespacing*{\section}{0pt}{1.55em}{0.65em}
+\titlespacing*{\subsection}{0pt}{1.2em}{0.5em}
 
 \captionsetup{
   font=small,
@@ -79,12 +78,12 @@
   textfont={color=mutedgray},
   justification=justified,
   singlelinecheck=false,
-  skip=5pt
+  skip=6pt
 }
-\renewcommand{\arraystretch}{1.16}
+\renewcommand{\arraystretch}{1.20}
 \setlength{\tabcolsep}{5pt}
-\setlength{\textfloatsep}{1.05em plus 0.2em minus 0.2em}
-\setlength{\intextsep}{0.95em plus 0.2em minus 0.2em}
+\setlength{\textfloatsep}{1.15em plus 0.2em minus 0.2em}
+\setlength{\intextsep}{1.0em plus 0.2em minus 0.2em}
 
 \pagestyle{fancy}
 \fancyhf{}
