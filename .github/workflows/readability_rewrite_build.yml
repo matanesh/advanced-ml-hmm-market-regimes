@@ -28,6 +28,9 @@ jobs:
           fc-match "Arimo"
           fc-match "DejaVu Sans Mono"
 
+      - name: Apply final visual readability cleanup
+        run: python patch_visual_readability_cleanup.py
+
       - name: Source readability checks
         run: |
           set -euo pipefail
@@ -87,8 +90,11 @@ jobs:
           set -euo pipefail
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add reports/report.pdf \
+          git add reports/report.tex \
+            reports/sections/05_regime_results.tex \
+            reports/sections/07_discussion.tex \
+            reports/report.pdf \
             submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf \
             submission/HMM_Market_Regimes_Submission_Matan_Eshel_203502802.zip
-          git commit -m "Rebuild readable expanded final report"
+          git commit -m "Finalize visual readability cleanup"
           git push origin HEAD:final/readability-rewrite
