@@ -28,9 +28,6 @@ jobs:
           fc-match "Arimo"
           fc-match "DejaVu Sans Mono"
 
-      - name: Apply final report visual cleanup
-        run: python patch_visual_readability_cleanup.py
-
       - name: Apply final notebook readability rewrite
         run: python patch_notebook_readability_final.py
 
