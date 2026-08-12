@@ -1,4 +1,4 @@
-name: Readability rewrite report build
+name: Final readability build
 
 on:
   push:
@@ -28,8 +28,27 @@ jobs:
           fc-match "Arimo"
           fc-match "DejaVu Sans Mono"
 
-      - name: Apply final visual readability cleanup
+      - name: Apply final report visual cleanup
         run: python patch_visual_readability_cleanup.py
+
+      - name: Apply final notebook readability rewrite
+        run: python patch_notebook_readability_final.py
+
+      - name: Notebook integrity checks
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('HMM_Market_Regimes_Project.ipynb')
+          nb = json.loads(p.read_text(encoding='utf-8'))
+          code = [c for c in nb['cells'] if c['cell_type'] == 'code']
+          assert len(nb['cells']) == 44, len(nb['cells'])
+          assert len(code) == 13, len(code)
+          assert all(c.get('execution_count') is not None for c in code)
+          errors = [o for c in code for o in c.get('outputs', []) if o.get('output_type') == 'error']
+          assert errors == [], errors
+          print('Notebook: 44 cells, 13 code cells, all executed, 0 error outputs')
+          PY
 
       - name: Source readability checks
         run: |
@@ -57,44 +76,66 @@ jobs:
           fi
           echo "Overfull boxes: $(grep -c 'Overfull' reports/report.log || true)"
           echo "Underfull boxes: $(grep -c 'Underfull' reports/report.log || true)"
+          echo "headheight warnings: $(grep -c 'headheight is too small' reports/report.log || true)"
 
       - name: Update submission package
         run: |
           set -euo pipefail
           cp reports/report.pdf submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf
+          cp HMM_Market_Regimes_Project.ipynb submission/HMM_Market_Regimes_Project_Matan_Eshel_203502802.ipynb
           rm -f submission/HMM_Market_Regimes_Submission_Matan_Eshel_203502802.zip
           zip -j submission/HMM_Market_Regimes_Submission_Matan_Eshel_203502802.zip \
             submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf \
             submission/HMM_Market_Regimes_Project_Matan_Eshel_203502802.ipynb \
             submission/README_SUBMISSION.md
           cmp reports/report.pdf submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf
+          cmp HMM_Market_Regimes_Project.ipynb submission/HMM_Market_Regimes_Project_Matan_Eshel_203502802.ipynb
 
-      - name: Render every page for visual QA
+      - name: Render every report page for visual QA
         run: |
           rm -rf qa_readability_renders
           mkdir -p qa_readability_renders
           pdftoppm -png -r 180 reports/report.pdf qa_readability_renders/page
           test "$(find qa_readability_renders -name 'page-*.png' | wc -l)" -gt 0
 
-      - name: Upload QA artifact
+      - name: Export notebook markdown for QA
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          nb = json.loads(Path('HMM_Market_Regimes_Project.ipynb').read_text(encoding='utf-8'))
+          out=[]
+          for i,c in enumerate(nb['cells']):
+              if c['cell_type']=='markdown':
+                  out.append(f'\n\n===== MARKDOWN CELL {i} =====\n')
+                  out.append(''.join(c.get('source', [])))
+          Path('notebook_markdown_cells_final.md').write_text(''.join(out), encoding='utf-8')
+          PY
+
+      - name: Upload final QA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: readability-rewrite-report
+          name: final-readability-qa
           path: |
             reports/report.pdf
             reports/report.log
             qa_readability_renders/*.png
+            HMM_Market_Regimes_Project.ipynb
+            notebook_markdown_cells_final.md
 
-      - name: Commit rebuilt report and package
+      - name: Commit rebuilt final artifacts
         run: |
           set -euo pipefail
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add reports/report.tex \
+            reports/sections/00_abstract.tex \
             reports/sections/05_regime_results.tex \
             reports/sections/07_discussion.tex \
             reports/report.pdf \
+            HMM_Market_Regimes_Project.ipynb \
             submission/HMM_Market_Regimes_Report_Matan_Eshel_203502802.pdf \
+            submission/HMM_Market_Regimes_Project_Matan_Eshel_203502802.ipynb \
             submission/HMM_Market_Regimes_Submission_Matan_Eshel_203502802.zip
-          git commit -m "Finalize visual readability cleanup"
+          git commit -m "Finalize readable report and notebook"
           git push origin HEAD:final/readability-rewrite
