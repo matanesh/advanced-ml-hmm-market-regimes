@@ -87,20 +87,22 @@
 
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[R]{\sffamily\small\color{mutedgray} \LR{Gaussian HMM} לזיהוי משטרי שוק}
-\fancyhead[L]{\sffamily\small\color{mutedgray} \LR{Advanced Machine Learning}}
+\fancyhead[R]{\sffamily\small\color{mutedgray} \textenglish{Gaussian HMM} לזיהוי משטרי שוק}
+\fancyhead[L]{\sffamily\small\color{mutedgray} \textenglish{Advanced Machine Learning}}
 \fancyfoot[C]{\sffamily\small\color{mutedgray}\thepage}
 \renewcommand{\headrulewidth}{0.35pt}
 \renewcommand{\headrule}{\hbox to\headwidth{\color{linegray}\leaders\hrule height \headrulewidth\hfill}}
 \setlength{\headheight}{17pt}
 
-\DeclareRobustCommand{\tech}[1]{\LR{#1}}
-\DeclareRobustCommand{\asset}[1]{\LR{#1}}
-\newcommand{\pct}[1]{\LR{#1\%}}
+% Explicit English spans are used instead of generic LR switches. This keeps
+% punctuation and font selection predictable inside Hebrew paragraphs.
+\DeclareRobustCommand{\tech}[1]{\textenglish{#1}}
+\DeclareRobustCommand{\asset}[1]{\textenglish{#1}}
+\newcommand{\pct}[1]{\textenglish{#1\%}}
 \newcommand{\datecode}[1]{\mbox{\textenglish{#1}}}
 % Long run IDs and paths should be allowed to break at punctuation. \nolinkurl
 % keeps a monospaced code appearance while avoiding wide unbreakable boxes.
-\newcommand{\code}[1]{\LR{\nolinkurl{#1}}}
+\newcommand{\code}[1]{\textenglish{\nolinkurl{#1}}}
 \newcolumntype{Y}{>{\RaggedLeft\arraybackslash}X}
 \newcolumntype{L}{>{\RaggedRight\arraybackslash}X}
 \newcolumntype{C}{>{\centering\arraybackslash}X}
@@ -120,13 +122,13 @@
 \vspace{1.45cm}
 {\color{linegray}\rule{0.82\textwidth}{0.8pt}}\par
 \vspace{0.85cm}
-{\sffamily\Huge\bfseries\color{academicblue} \LR{Gaussian HMM} \par}
+{\sffamily\Huge\bfseries\color{academicblue} \textenglish{Gaussian HMM} \par}
 \vspace{0.18cm}
 {\sffamily\huge\bfseries\color{academicblue} לזיהוי משטרי שוק ולחיזוי כיוון יומי \par}
 \vspace{0.75cm}
 {\sffamily\Large\color{deepnavy} ניתוח רב־נכסי ויציבות משטרים \par}
 \vspace{0.18cm}
-{\sffamily\Large\color{deepnavy} והשוואה למודלי בסיס ול־\LR{Supervised ML} \par}
+{\sffamily\Large\color{deepnavy} והשוואה למודלי בסיס ול־\textenglish{Supervised ML} \par}
 \vspace{0.8cm}
 {\color{linegray}\rule{0.82\textwidth}{0.8pt}}\par
 
@@ -136,7 +138,7 @@
 \vfill
 {\sffamily\Large\bfseries\color{deepnavy} מתן אשל \par}
 \vspace{0.25cm}
-{\sffamily\large מספר סטודנט: \LR{203502802} \par}
+{\sffamily\large מספר סטודנט: \textenglish{203502802} \par}
 \vspace{0.75cm}
 {\sffamily\large\color{mutedgray} אוגוסט 2026 \par}
 \vspace{0.75cm}
