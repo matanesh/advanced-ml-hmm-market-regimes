@@ -1,0 +1,50 @@
+name: Notebook readability QA
+
+on:
+  push:
+    branches:
+      - final/readability-rewrite
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Export markdown cells and notebook metadata
+        run: |
+          python - <<'PY'
+          import json, hashlib
+          from pathlib import Path
+          p = Path('HMM_Market_Regimes_Project.ipynb')
+          nb = json.loads(p.read_text(encoding='utf-8'))
+          lines=[]
+          code_hashes=[]
+          for i, cell in enumerate(nb['cells']):
+              if cell['cell_type']=='markdown':
+                  lines.append(f'\n\n===== MARKDOWN CELL {i} =====\n')
+                  lines.append(''.join(cell.get('source', [])))
+              elif cell['cell_type']=='code':
+                  src=''.join(cell.get('source', []))
+                  code_hashes.append(hashlib.sha256(src.encode()).hexdigest())
+          Path('notebook_markdown_cells.md').write_text(''.join(lines), encoding='utf-8')
+          Path('notebook_qa_meta.txt').write_text(
+              f"cells={len(nb['cells'])}\n"
+              f"code_cells={sum(c['cell_type']=='code' for c in nb['cells'])}\n"
+              f"markdown_cells={sum(c['cell_type']=='markdown' for c in nb['cells'])}\n"
+              f"executed_code_cells={sum(c['cell_type']=='code' and c.get('execution_count') is not None for c in nb['cells'])}\n"
+              f"error_outputs={sum(o.get('output_type')=='error' for c in nb['cells'] if c['cell_type']=='code' for o in c.get('outputs', []))}\n"
+              + '\n'.join(f'code_sha256_{i}={h}' for i,h in enumerate(code_hashes)),
+              encoding='utf-8'
+          )
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: notebook-readability-qa
+          path: |
+            HMM_Market_Regimes_Project.ipynb
+            notebook_markdown_cells.md
+            notebook_qa_meta.txt
