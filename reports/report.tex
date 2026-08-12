@@ -1,4 +1,4 @@
-\documentclass[11pt,a4paper]{article}
+\documentclass[12pt,a4paper]{article}
 
 \usepackage{fontspec}
 \usepackage{amsmath,amssymb,amsfonts}
@@ -94,13 +94,16 @@
 \renewcommand{\headrule}{\hbox to\headwidth{\color{linegray}\leaders\hrule height \headrulewidth\hfill}}
 \setlength{\headheight}{17pt}
 
-\DeclareRobustCommand{\tech}[1]{\LR{#1}}
-\DeclareRobustCommand{\asset}[1]{\LR{#1}}
-\newcommand{\pct}[1]{\LR{#1\%}}
-\newcommand{\datecode}[1]{\mbox{\textenglish{#1}}}
+% Bidirectional-text guard: an invisible RTL mark after every LTR token keeps
+% following neutral punctuation (.,:;?!) on the visually correct side in Hebrew.
+\newcommand{\rtlmark}{\char"200F}
+\DeclareRobustCommand{\tech}[1]{\LR{#1}\rtlmark}
+\DeclareRobustCommand{\asset}[1]{\LR{#1}\rtlmark}
+\newcommand{\pct}[1]{\LR{#1\%}\rtlmark}
+\newcommand{\datecode}[1]{\mbox{\textenglish{#1}}\rtlmark}
 % Long run IDs and paths should be allowed to break at punctuation. \nolinkurl
 % keeps a monospaced code appearance while avoiding wide unbreakable boxes.
-\newcommand{\code}[1]{\LR{\nolinkurl{#1}}}
+\newcommand{\code}[1]{\LR{\nolinkurl{#1}}\rtlmark}
 \newcolumntype{Y}{>{\RaggedLeft\arraybackslash}X}
 \newcolumntype{L}{>{\RaggedRight\arraybackslash}X}
 \newcolumntype{C}{>{\centering\arraybackslash}X}
